@@ -7,13 +7,9 @@ set(CMAKE_BUILD_TYPE Release) #None, Debug, Release, RelWithDebInfo, MinSizeRel
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  cmake_modules
   geometry_msgs
   roscpp
   std_msgs
-  tf
-  nav_msgs
-  visualization_msgs
   costmap_2d
   pluginlib
 )
@@ -102,7 +98,6 @@ catkin_package(
     pluginlib
     roscpp 
     std_msgs 
-    tf
     costmap_2d
   #DEPENDS 
 )
