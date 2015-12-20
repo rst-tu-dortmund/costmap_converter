@@ -1,0 +1,19 @@
+<library path="lib/libcostmap_converter">
+  
+  <class type="costmap_converter::CostmapToPolygonsDBSMCCH" base_class_type="costmap_converter::BaseCostmapToPolygons">
+  <description>
+      This class converts costmap2d obstacles into a vector of convex polygons. 
+      Clustering is performed with DBScan. Convex polygons are detected using the Monotone Chain Convex Hull algorithm.
+  </description>
+  </class>
+  
+  <class type="costmap_converter::CostmapToLinesDBSMCCH" base_class_type="costmap_converter::BaseCostmapToPolygons">
+  <description>
+      This class converts costmap2d obstacles into a vector of lines (represented as polygon msg). 
+      Clustering is performed with DBScan. Clusters are transformed into convex polygons using the Monotone Chain Convex Hull algorithm.
+      The resulting keypoints are used for possible line candidates.
+      A line is only defined if there exist a specified number of support points between each keypoint pair.
+  </description>
+  </class>
+  
+</library>
