@@ -63,6 +63,9 @@ void CostmapToPolygonsDBSMCCH::initialize()
     
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
+    
+    min_keypoint_separation_ = 0.1;
+    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
 }
 
 
@@ -226,7 +229,9 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     for (int i = 0; i < n; ++i)
     {
       while (k >= 2 && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0) 
+      {
         k--;
+      }
       cluster[i].toPointMsg(polygon.points[k]);
       k++;
     }
@@ -235,20 +240,28 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     for (int i = n-2, t = k+1; i >= 0; i--) 
     {
       while (k >= t && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0)
+      {
         k--;
+      }
       cluster[i].toPointMsg(polygon.points[k]);
       k++;
     }
-    polygon.points.resize(k);
-      
-//     for (int i = 0; i < (polygon.points.size() - 1); i++)
-//     {
-//       float dist = sqrt(pow((polygon.points[i].x - polygon.points[i+1].x),2)+pow((polygon.points[i].y - polygon.points[i+1].y),2));
-//       if(dist < 3.0)
-//       {
-//         polygon.points.erase(polygon.points.begin()+i+1);
-//       } 
-//     }
+    
+
+    polygon.points.resize(k); // original
+    // TEST we skip the last point, since in our definition the polygon vertices do not contain the start/end vertex twice.
+//     polygon.points.resize(k-1); // TODO remove last point from the algorithm above to reduce computational cost
+
+    
+    
+    if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
+    {
+      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
+      {
+        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < min_keypoint_separation_ )
+          polygon.points.erase(polygon.points.begin()+i+1);
+      }
+    }
 }
 
 

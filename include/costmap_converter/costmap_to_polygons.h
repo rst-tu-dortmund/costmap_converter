@@ -219,8 +219,11 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
    std::vector<KeyPoint> occupied_cells_; //!< List of occupied cells in the current map (updated by updateCostmap2D())
 
    // DBSCAN parameters
-   double max_distance_; //< Parameter for DB_Scan, maximum distance to neighbors [m]
-   int min_pts_; //< Parameter for DB_Scan: minimum number of points that define a cluster
+   double max_distance_; //!< Parameter for DB_Scan, maximum distance to neighbors [m]
+   int min_pts_; //!< Parameter for DB_Scan: minimum number of points that define a cluster
+   
+   // convex hull parameters
+   double min_keypoint_separation_; //!< Clear keypoints of the convex polygon that are close to each other [distance in meters] (0: keep all)
    
   private:
        

@@ -53,10 +53,10 @@ class CostmapStandaloneConversion
 public:
   CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
-	  
-	  std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
-	  n_.param("converter_plugin", converter_plugin, converter_plugin);
-	  
+      
+      std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
+      n_.param("converter_plugin", converter_plugin, converter_plugin);
+      
       try
       {
         converter_ = converter_loader_.createInstance(converter_plugin);
@@ -64,17 +64,20 @@ public:
       catch(pluginlib::PluginlibException& ex)
       {
         ROS_ERROR("The plugin failed to load for some reason. Error: %s", ex.what());
+        ros::shutdown();
       }
+      
+      ROS_INFO_STREAM(converter_plugin << " loaded.");
       
       costmap_sub_ = n_.subscribe("/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
       polygon_pub_ = n_.advertise<geometry_msgs::PolygonStamped>("/costmap_polygons", 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
       
       frame_id_ = "/map";
-	  n_.param("frame_id", frame_id_, frame_id_);
-	  
-	  occupied_min_value_ = 100;
-	  n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
+      n_.param("frame_id", frame_id_, frame_id_);
+
+      occupied_min_value_ = 100;
+      n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
       
       if (converter_)
       {
@@ -121,7 +124,6 @@ public:
          polygon.header.stamp = ros::Time::now();
          polygon.polygon = polygons->at(i);
          polygon_pub_.publish(polygon);       
-        
       }
       
       
@@ -165,10 +167,13 @@ public:
         line_start.x = polygons[i].points.back().x;
         line_start.y = polygons[i].points.back().y;
         line_list.points.push_back(line_start);
-        geometry_msgs::Point line_end;
-        line_end.x = polygons[i].points.front().x;
-        line_end.y = polygons[i].points.front().y;
-        line_list.points.push_back(line_end);
+        if (line_list.points.size() % 2 != 0)
+        {
+          geometry_msgs::Point line_end;
+          line_end.x = polygons[i].points.front().x;
+          line_end.y = polygons[i].points.front().y;
+          line_list.points.push_back(line_end);
+        }
       }
         
       

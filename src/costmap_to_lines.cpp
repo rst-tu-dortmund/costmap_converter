@@ -62,11 +62,15 @@ void CostmapToLinesDBSMCCH::initialize()
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
     
+    // convex hull
+    min_keypoint_separation_ = 0.3;
+    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    
     // Line extraction
-    support_pts_min_dist_ = 0.01;
+    support_pts_min_dist_ = 0.06;
     nh.param("support_pts_min_dist_", support_pts_min_dist_, support_pts_min_dist_);
     
-    min_support_pts_ = 4;
+    min_support_pts_ = 3;
     nh.param("min_support_pts_", min_support_pts_, min_support_pts_);
 }  
   
@@ -118,59 +122,51 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
      return;
    }
   
-   for (int i=0; i<(int)polygon.points.size(); ++i)
+   for (int i=0; i<(int)polygon.points.size() - 1; ++i) // this implemenation requires a closed polygon (start vertex = end vertex)
    {
-       const geometry_msgs::Point32& vertex1 = polygon.points[i];
+        const geometry_msgs::Point32& vertex1 = polygon.points[i];
+        const geometry_msgs::Point32& vertex2 = polygon.points[i+1];
        
-       bool vertex1_is_part_of_a_line = false;
-       
-       for (int j=i+1; j<(int)polygon.points.size(); ++j)
-       {
-          // define edges between each pair of polygon vertices
-          const geometry_msgs::Point32& vertex2 = polygon.points[j];
-          
-//           if (vertex1.x == vertex2.x && vertex1.y == vertex2.y)
-//             continue;  // we have found the same vertex
-          
-          //Search support points
-          int support_points = 0;
-         
-          for(int c = 0; c < cluster.size(); ++c)
+        bool vertex1_is_part_of_a_line = false;
+        
+        //Search support points
+        int support_points = 0;
+        
+        for(int c = 0; c < cluster.size(); ++c)
+        {
+          if((cluster[c].x == vertex1.x && cluster[c].y == vertex1.y) || (cluster[c].x == vertex2.x && cluster[c].y == vertex2.y))
+          {  
+            continue;
+          }
+          else
           {
-            if((cluster[c].x == vertex1.x && cluster[c].y == vertex1.y) || (cluster[c].x == vertex2.x && cluster[c].y == vertex2.y))
-            {  
-              continue;
-            }
-            else
-            {
-              double dist_line_to_point = computeDistanceToLineSegment( cluster[c], vertex1, vertex2 );
+            double dist_line_to_point = computeDistanceToLineSegment( cluster[c], vertex1, vertex2 );
 
-              if(dist_line_to_point <= support_pts_min_dist_)
+            if(dist_line_to_point <= support_pts_min_dist_)
+            {
+              support_points++;
+              if (support_points >= min_support_pts_)
               {
-                support_points++;
-                if (support_points >= min_support_pts_)
-                {
-                  // line found:
-                  geometry_msgs::Polygon line;
-                  line.points.push_back(vertex1);
-                  line.points.push_back(vertex2);
-                  lines = line; // back insertion
-                  vertex1_is_part_of_a_line = true;
-                  break;
-                }
+                // line found:
+                geometry_msgs::Polygon line;
+                line.points.push_back(vertex1);
+                line.points.push_back(vertex2);
+                lines = line; // back insertion
+                vertex1_is_part_of_a_line = true;
+                break;
               }
             }
           }
-       }
-       
-       if (!vertex1_is_part_of_a_line)
-       {
-          // add vertex 1 as single point
-          geometry_msgs::Polygon point;
-          point.points.push_back(vertex1);
-          lines = point; // back insertion
-       }
-      }
+        }
+              
+        if (!vertex1_is_part_of_a_line) // for i=polygon.points.size() -> already included since vertex_0 == vertex_n
+        {
+            // add vertex 1 as single point
+            geometry_msgs::Polygon point;
+            point.points.push_back(vertex1);
+            lines = point; // back insertion
+        }
+    }
  
 
 }
