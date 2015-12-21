@@ -51,11 +51,15 @@
 class CostmapStandaloneConversion
 {
 public:
-  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons")
+  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
+	  
+	  std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
+	  n_.param("converter_plugin", converter_plugin, converter_plugin);
+	  
       try
       {
-        converter_ = converter_loader_.createInstance("costmap_converter::CostmapToPolygonsDBSMCCH");
+        converter_ = converter_loader_.createInstance(converter_plugin);
       }
       catch(pluginlib::PluginlibException& ex)
       {
@@ -66,7 +70,11 @@ public:
       polygon_pub_ = n_.advertise<geometry_msgs::PolygonStamped>("/costmap_polygons", 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
       
-      frame_id_ = "/map"; // TODO ROSPARAM
+      frame_id_ = "/map";
+	  n_.param("frame_id", frame_id_, frame_id_);
+	  
+	  occupied_min_value_ = 100;
+	  n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
       
       if (converter_)
       {
@@ -96,7 +104,7 @@ public:
       {
         unsigned int mx, my;
         map.indexToCells(i, mx, my);
-        map.setCost(mx, my, msg->data[i] >= 100 ? 255 : 0 ); // TODO PARAM
+        map.setCost(mx, my, msg->data[i] >= occupied_min_value_ ? 255 : 0 );
       }
       
       // convert
@@ -180,6 +188,7 @@ private:
   ros::Publisher marker_pub_;
   
   std::string frame_id_;
+  int occupied_min_value_;
   
   costmap_2d::Costmap2D map;
   
