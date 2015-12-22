@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2015-12-22)
+------------------
 * Added a plugin for converting the costmap to lines using ransac
 
 0.0.1 (2015-12-21)
