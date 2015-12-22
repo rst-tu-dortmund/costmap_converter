@@ -16,4 +16,11 @@
   </description>
   </class>
   
+  <class type="costmap_converter::CostmapToLinesDBSRANSAC" base_class_type="costmap_converter::BaseCostmapToPolygons">
+  <description>
+      This class converts costmap2d obstacles into a vector of lines (represented as polygon msg). 
+      Clustering is performed with DBScan. For each cluster RANSAC is applied sequentally to fit multiple line models.
+  </description>
+  </class>
+  
 </library>

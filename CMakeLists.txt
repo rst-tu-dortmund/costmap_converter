@@ -115,7 +115,9 @@ include_directories(
 )
 
 ## Declare a cpp library
-add_library(costmap_converter src/costmap_to_polygons.cpp src/costmap_to_lines.cpp)
+add_library(costmap_converter 	src/costmap_to_polygons.cpp 
+				src/costmap_to_lines_convex_hull.cpp
+				src/costmap_to_lines_ransac.cpp)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
 
 ## Declare a cpp executable

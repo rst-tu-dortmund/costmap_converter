@@ -36,8 +36,8 @@
  * Author: Christoph Rösmann, Otniel Rinaldo
  *********************************************************************/
 
-#ifndef COSTMAP_TO_LINES_H_
-#define COSTMAP_TO_LINES_H_
+#ifndef COSTMAP_TO_LINES_CONVEX_HULL_H_
+#define COSTMAP_TO_LINES_CONVEX_HULL_H_
 
 #include <costmap_converter/costmap_converter_interface.h>
 #include <costmap_converter/costmap_to_polygons.h>
@@ -63,8 +63,6 @@ namespace costmap_converter
  * 3. In the third step extract lines from each polygon (convex hull) if there exist at least a predefined number of support points.
  * 
  * The output is a container of polygons (but each polygon does only contain a single vertex (point) or two vertices (line)
- *  
- * @todo Implement a line extractor plugin using RANSAC
  */
   class CostmapToLinesDBSMCCH : public CostmapToPolygonsDBSMCCH
   {
@@ -154,4 +152,4 @@ double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, c
   
 } //end namespace teb_local_planner
 
-#endif /* COSTMAP_TO_LINES_H_ */
+#endif /* COSTMAP_TO_LINES_CONVEX_HULL_H_ */

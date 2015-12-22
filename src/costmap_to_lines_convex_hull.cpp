@@ -36,7 +36,7 @@
  * Author: Christoph Rösmann, Otniel Rinaldo
  *********************************************************************/
 
-#include <costmap_converter/costmap_to_lines.h>
+#include <costmap_converter/costmap_to_lines_convex_hull.h>
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <pluginlib/class_list_macros.h>
