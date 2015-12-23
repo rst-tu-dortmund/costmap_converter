@@ -81,7 +81,7 @@ public:
       
       if (converter_)
       {
-        converter_->initialize();
+        converter_->initialize(n_);
         converter_->setCostmap2D(&map); 
 //         converter_->startWorker(ros::Rate(5), &map, true);
       }

@@ -51,17 +51,15 @@ CostmapToLinesDBSRANSAC::CostmapToLinesDBSRANSAC() : CostmapToPolygonsDBSMCCH()
 
 }
   
-void CostmapToLinesDBSRANSAC::initialize()
+void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
 { 
-    ros::NodeHandle nh("~costmap_to_lines");
-
     // DB SCAN
     max_distance_ = 0.4; 
     nh.param("cluster_max_distance", max_distance_, max_distance_);
     
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
-    
+
     // ransac
     ransac_inlier_distance_ = 0.2;
     nh.param("ransac_inlier_distance", ransac_inlier_distance_, ransac_inlier_distance_);

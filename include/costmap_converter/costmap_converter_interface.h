@@ -73,8 +73,9 @@ public:
   
     /**
      * @brief Initialize the plugin
+     * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize() = 0;
+    virtual void initialize(ros::NodeHandle nh) = 0;
     
     /**
      * @brief Destructor

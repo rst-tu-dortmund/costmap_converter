@@ -52,12 +52,10 @@ CostmapToPolygonsDBSMCCH::CostmapToPolygonsDBSMCCH() : BaseCostmapToPolygons()
   costmap_ = NULL;
 }
 
-void CostmapToPolygonsDBSMCCH::initialize()
+void CostmapToPolygonsDBSMCCH::initialize(ros::NodeHandle nh)
 {
     costmap_ = NULL;
-    
-    ros::NodeHandle nh("~costmap_to_polygons");
-
+   
     max_distance_ = 0.4; 
     nh.param("cluster_max_distance", max_distance_, max_distance_);
     

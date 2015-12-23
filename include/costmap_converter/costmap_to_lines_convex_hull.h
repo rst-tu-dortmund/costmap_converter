@@ -80,8 +80,9 @@ namespace costmap_converter
     
     /**
      * @brief Initialize the plugin
+     * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize();
+    virtual void initialize(ros::NodeHandle nh);
     
     /**
      * @brief This method performs the actual work (conversion of the costmap to polygons)

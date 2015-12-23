@@ -51,10 +51,8 @@ CostmapToLinesDBSMCCH::CostmapToLinesDBSMCCH() : CostmapToPolygonsDBSMCCH()
 
 }
   
-void CostmapToLinesDBSMCCH::initialize()
+void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
 { 
-    ros::NodeHandle nh("~costmap_to_lines");
-
     // DB SCAN
     max_distance_ = 0.4; 
     nh.param("cluster_max_distance", max_distance_, max_distance_);
