@@ -129,8 +129,8 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
           int value = costmap_->getCost(i,j);
           if(value >= 254)
           {
-            double x = costmap_->getOriginX() + double(idx / costmap_->getSizeInCellsY()) * costmap_->getResolution();
-            double y = costmap_->getOriginY() + double(idx % costmap_->getSizeInCellsX()) * costmap_->getResolution();
+            double x, y;
+            costmap_->mapToWorld(i,j,x,y);
             occupied_cells_.push_back( KeyPoint( x, y ) );
           }
           ++idx;
