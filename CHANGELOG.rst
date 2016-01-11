@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.4 (2016-01-11)
+------------------
 * Fixed conversion from map to world coordinates if the costmap is not quadratic.
 
 0.0.3 (2015-12-23)
