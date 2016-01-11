@@ -2,6 +2,10 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixed conversion from map to world coordinates if the costmap is not quadratic.
+
 0.0.3 (2015-12-23)
 ------------------
 * The argument list of the initialize method requires a nodehandle from now on. This facilitates the handling of parameter namespaces for multiple instantiations of the plugin.
