@@ -70,10 +70,10 @@ void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
     ransac_inlier_distance_ = 0.2;
     nh.param("ransac_inlier_distance", ransac_inlier_distance_, ransac_inlier_distance_);
     
-    ransac_min_inliers_ = 8;
+    ransac_min_inliers_ = 10;
     nh.param("ransac_min_inliers", ransac_min_inliers_, ransac_min_inliers_);
     
-    ransac_no_iterations_ = 100;
+    ransac_no_iterations_ = 2000;
     nh.param("ransac_no_iterations", ransac_no_iterations_, ransac_no_iterations_);
    
     ransac_remainig_outliers_ = 3;
@@ -82,7 +82,7 @@ void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
     ransac_convert_outlier_pts_ = true;
     nh.param("ransac_convert_outlier_pts", ransac_convert_outlier_pts_, ransac_convert_outlier_pts_);
     
-    ransac_filter_remaining_outlier_pts_ = true;
+    ransac_filter_remaining_outlier_pts_ = false;
     nh.param("ransac_filter_remaining_outlier_pts", ransac_filter_remaining_outlier_pts_, ransac_filter_remaining_outlier_pts_);
     
     // convex hull (only necessary if outlier filtering is enabled)
@@ -198,7 +198,7 @@ bool CostmapToLinesDBSRANSAC::lineRansac(const std::vector<KeyPoint>& data, doub
     int no_inliers = 0;
     for (int j=0; j<(int)data.size(); ++j)
     {
-      if ( computeDistanceToLineSegment(data[j], data[start_idx], data[end_idx] ) <= inlier_distance )
+      if ( isInlier(data[j], data[start_idx], data[end_idx], inlier_distance) )
         ++no_inliers;
     }
     
@@ -228,7 +228,7 @@ bool CostmapToLinesDBSRANSAC::lineRansac(const std::vector<KeyPoint>& data, doub
     int no_inliers = 0;
     for (int i=0; i<(int)data.size(); ++i)
     {
-        if ( computeDistanceToLineSegment( data[i], best_model.first, best_model.second ) <= inlier_distance )
+        if ( isInlier( data[i], best_model.first, best_model.second, inlier_distance ) )
         {
           if (inliers)
             inliers->push_back( data[i] );
