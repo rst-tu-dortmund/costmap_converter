@@ -50,6 +50,13 @@ namespace costmap_converter
 CostmapToPolygonsDBSMCCH::CostmapToPolygonsDBSMCCH() : BaseCostmapToPolygons()
 {
   costmap_ = NULL;
+  dynamic_recfg_ = NULL;
+}
+
+CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH() 
+{
+  if (dynamic_recfg_ != NULL)
+    delete dynamic_recfg_;
 }
 
 void CostmapToPolygonsDBSMCCH::initialize(ros::NodeHandle nh)
@@ -64,6 +71,11 @@ void CostmapToPolygonsDBSMCCH::initialize(ros::NodeHandle nh)
     
     min_keypoint_separation_ = 0.1;
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    
+    // setup dynamic reconfigure
+    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>(nh);
+    dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToPolygonsDBSMCCH::reconfigureCB, this, _1, _2);
+    dynamic_recfg_->setCallback(cb);
 }
 
 
@@ -277,6 +289,12 @@ PolygonContainerConstPtr CostmapToPolygonsDBSMCCH::getPolygons()
   return polygons;
 }
 
+void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level)
+{
+    max_distance_ = config.cluster_max_distance;
+    min_pts_ = config.cluster_min_pts;
+    min_keypoint_separation_ = config.cluster_min_pts;
+}
 
 }//end namespace costmap_converter
 

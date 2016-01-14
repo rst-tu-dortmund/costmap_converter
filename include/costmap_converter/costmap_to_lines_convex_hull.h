@@ -42,6 +42,8 @@
 #include <costmap_converter/costmap_converter_interface.h>
 #include <costmap_converter/costmap_to_polygons.h>
 
+// dynamic reconfigure
+#include <costmap_converter/CostmapToLinesDBSMCCHConfig.h>
 
 namespace costmap_converter
 {
@@ -74,9 +76,9 @@ namespace costmap_converter
     CostmapToLinesDBSMCCH();
        
     /**
-     * @brief Empty destructor
+     * @brief Destructor
      */
-    virtual ~CostmapToLinesDBSMCCH(){}
+    virtual ~CostmapToLinesDBSMCCH();
     
     /**
      * @brief Initialize the plugin
@@ -116,6 +118,19 @@ namespace costmap_converter
         
     double support_pts_min_dist_;
     int min_support_pts_;
+   
+  private:
+    
+    /**
+     * @brief Callback for the dynamic_reconfigure node.
+     * 
+     * This callback allows to modify parameters dynamically at runtime without restarting the node
+     * @param config Reference to the dynamic reconfigure config
+     * @param level Dynamic reconfigure level
+     */
+    void reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level);
+    
+    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime   
  
   };  
   

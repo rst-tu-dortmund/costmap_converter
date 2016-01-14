@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   costmap_2d
+  dynamic_reconfigure
   pluginlib
 )
 
@@ -81,6 +82,14 @@ find_package(catkin REQUIRED COMPONENTS
 #   geometry_msgs#   std_msgs
 # )
 
+#add dynamic reconfigure api
+#find_package(catkin REQUIRED dynamic_reconfigure)
+generate_dynamic_reconfigure_options(
+  cfg/dynamic_reconfigure/CostmapToPolygonsDBSMCCH.cfg
+  cfg/dynamic_reconfigure/CostmapToLinesDBSMCCH.cfg
+  cfg/dynamic_reconfigure/CostmapToLinesDBSRANSAC.cfg
+)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -98,6 +107,7 @@ catkin_package(
     pluginlib
     roscpp 
     std_msgs 
+    dynamic_reconfigure
     costmap_2d
   #DEPENDS 
 )
@@ -170,11 +180,11 @@ install(FILES
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-#install(DIRECTORY
-#  launch cfg
-#  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-#  PATTERN ".svn" EXCLUDE
-#)
+install(DIRECTORY
+  cfg
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  PATTERN ".svn" EXCLUDE
+)
 
 
 #############

@@ -43,6 +43,8 @@
 #include <costmap_converter/costmap_to_polygons.h>
 #include <boost/random.hpp>
 
+#include <costmap_converter/CostmapToLinesDBSRANSACConfig.h>
+
 namespace costmap_converter
 {
   
@@ -75,9 +77,9 @@ namespace costmap_converter
     CostmapToLinesDBSRANSAC();
        
     /**
-     * @brief Empty destructor
+     * @brief Destructor
      */
-    virtual ~CostmapToLinesDBSRANSAC(){}
+    virtual ~CostmapToLinesDBSRANSAC();
     
     /**
      * @brief Initialize the plugin
@@ -160,6 +162,19 @@ namespace costmap_converter
     
 //     void adjustLineLength(const std::vector<KeyPoint>& data, const KeyPoint& linept1, const KeyPoint& linept2, 
 //                           KeyPoint& line_start, KeyPoint& line_end);
+    
+    private:
+    
+    /**
+     * @brief Callback for the dynamic_reconfigure node.
+     * 
+     * This callback allows to modify parameters dynamically at runtime without restarting the node
+     * @param config Reference to the dynamic reconfigure config
+     * @param level Dynamic reconfigure level
+     */
+    void reconfigureCB(CostmapToLinesDBSRANSACConfig& config, uint32_t level);
+    
+    dynamic_reconfigure::Server<CostmapToLinesDBSRANSACConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime   
     
   };  
   

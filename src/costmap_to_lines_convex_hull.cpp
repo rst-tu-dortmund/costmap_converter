@@ -48,7 +48,13 @@ namespace costmap_converter
 
 CostmapToLinesDBSMCCH::CostmapToLinesDBSMCCH() : CostmapToPolygonsDBSMCCH() 
 {
-
+    dynamic_recfg_ = NULL;
+}
+  
+CostmapToLinesDBSMCCH::~CostmapToLinesDBSMCCH() 
+{
+  if (dynamic_recfg_ != NULL)
+    delete dynamic_recfg_;
 }
   
 void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
@@ -70,6 +76,11 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
     
     min_support_pts_ = 3;
     nh.param("min_support_pts_", min_support_pts_, min_support_pts_);
+    
+    // setup dynamic reconfigure
+    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>(nh);
+    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToLinesDBSMCCH::reconfigureCB, this, _1, _2);
+    dynamic_recfg_->setCallback(cb);
 }  
   
 void CostmapToLinesDBSMCCH::compute()
@@ -167,6 +178,15 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
     }
  
 
+}
+
+void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level)
+{
+    max_distance_ = config.cluster_max_distance;
+    min_pts_ = config.cluster_min_pts;
+    min_keypoint_separation_ = config.cluster_min_pts;
+    support_pts_min_dist_ = config.support_pts_min_dist;
+    min_support_pts_ = config.min_support_pts;
 }
 
 

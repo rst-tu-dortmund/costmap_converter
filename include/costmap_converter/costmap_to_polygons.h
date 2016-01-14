@@ -52,6 +52,10 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
 
+// dynamic reconfigure
+#include <costmap_converter/CostmapToPolygonsDBSMCCHConfig.h>
+#include <dynamic_reconfigure/server.h>
+
 
 namespace costmap_converter
 {
@@ -102,9 +106,9 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
     CostmapToPolygonsDBSMCCH();
     
     /**
-     * @brief Empty destructor
+     * @brief Destructor
      */
-    virtual ~CostmapToPolygonsDBSMCCH(){}
+    virtual ~CostmapToPolygonsDBSMCCH();
     
     /**
      * @brief Initialize the plugin
@@ -129,7 +133,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @sa setCostmap2D
      */
     virtual void updateCostmap2D();
-
+    
     
     /**
      * @brief Convert a generi point type to a geometry_msgs::Polygon
@@ -215,7 +219,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
     * @param polygons Updated polygon container
     */
    void updatePolygonContainer(PolygonContainerPtr polygons);   
-       
+          
    
    std::vector<KeyPoint> occupied_cells_; //!< List of occupied cells in the current map (updated by updateCostmap2D())
 
@@ -228,8 +232,20 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
    
   private:
        
+    /**
+     * @brief Callback for the dynamic_reconfigure node.
+     * 
+     * This callback allows to modify parameters dynamically at runtime without restarting the node
+     * @param config Reference to the dynamic reconfigure config
+     * @param level Dynamic reconfigure level
+     */
+    void reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level);
+    
+    
     PolygonContainerPtr polygons_; //!< Current shared container of polygons
     boost::mutex mutex_; //!< Mutex that keeps track about the ownership of the shared polygon instance
+    
+    dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime    
    
     costmap_2d::Costmap2D *costmap_; //!< Pointer to the costmap2d
    
