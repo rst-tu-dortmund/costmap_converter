@@ -41,7 +41,6 @@
 #include <boost/thread/mutex.hpp>
 #include <pluginlib/class_list_macros.h>
 
-
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToPolygonsDBSMCCH, costmap_converter::BaseCostmapToPolygons)
 
 namespace costmap_converter
@@ -139,7 +138,7 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
         for(int j = 0; j < costmap_->getSizeInCellsY(); j++)
         {
           int value = costmap_->getCost(i,j);
-          if(value >= 254)
+          if(value >= costmap_2d::LETHAL_OBSTACLE)
           {
             double x, y;
             costmap_->mapToWorld(i,j,x,y);
@@ -240,21 +239,21 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     {
       while (k >= 2 && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0) 
       {
-        k--;
+        --k;
       }
       cluster[i].toPointMsg(polygon.points[k]);
-      k++;
+      ++k;
     }
       
     // upper hull  
-    for (int i = n-2, t = k+1; i >= 0; i--) 
+    for (int i = n-2, t = k+1; i >= 0; --i) 
     {
       while (k >= t && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0)
       {
-        k--;
+        --k;
       }
       cluster[i].toPointMsg(polygon.points[k]);
-      k++;
+      ++k;
     }
     
 

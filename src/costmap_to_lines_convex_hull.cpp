@@ -67,7 +67,7 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
     nh.param("cluster_min_pts", min_pts_, min_pts_);
     
     // convex hull
-    min_keypoint_separation_ = 0.3;
+    min_keypoint_separation_ = 0.1;
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
     // Line extraction
@@ -126,8 +126,8 @@ void CostmapToLinesDBSMCCH::compute()
 }
 
 
-bool sort_keypoint_x(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.x<j.x); }
-bool sort_keypoint_y(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.y<j.y); }
+bool sort_keypoint_x(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.x<j.x) || (i.x == j.x && i.y < j.y); }
+bool sort_keypoint_y(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.y<j.y) || (i.y == j.y && i.x < j.x); }
 
 void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon,
                                                   std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines)
@@ -135,25 +135,18 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
    if (polygon.points.empty())
      return;
   
-   if (polygon.points.size() <= 1)
+   if (polygon.points.size() < 2)
    {
      lines = polygon; // our polygon is just a point, push back onto the output sequence
      return;
    }
    int n = (int)polygon.points.size();
-   if (n==2)
-     --n; // we do not need to close the polygon for a line
      
-   for (int i=0; i<n; ++i) // this implemenation requires a closed polygon (start vertex = end vertex)
+   for (int i=1; i<n; ++i) // this implemenation requires an explicitly closed polygon (start vertex = end vertex)
    {
-        const geometry_msgs::Point32* vertex1 = &polygon.points[i];
-        const geometry_msgs::Point32* vertex2;
-        if (i >= n-1)
-          vertex2 = &polygon.points[0];
-        else
-          vertex2 = &polygon.points[i+1];
-        
-        
+        const geometry_msgs::Point32* vertex1 = &polygon.points[i-1];
+        const geometry_msgs::Point32* vertex2 = &polygon.points[i];
+
         // check how many vertices belong to the line (sometimes the convex hull algorithm finds multiple vertices on a line,
         // in case of small coordinate deviations)
         double dx = vertex2->x - vertex1->x;
@@ -180,21 +173,13 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
         //Search support points
         std::vector<KeyPoint> support_points;
         
-        for(int c = 0; c < cluster.size(); ++c)
+        for(int c = 0; c < (int)cluster.size(); ++c)
         {
-          if( (fabs(cluster[c].x - vertex1->x)<1e-3 && fabs(cluster[c].y - vertex1->y)<1e-3) || // start and goal
-              (fabs(cluster[c].x - vertex2->x)<1e-3 && fabs(cluster[c].y - vertex2->y)<1e-3))
-          {  
-            support_points.push_back(cluster[c]);
-          }
-          else
-          {
             bool is_inbetween = false;
             double dist_line_to_point = computeDistanceToLineSegment( cluster[c], *vertex1, *vertex2, &is_inbetween );
 
             if(is_inbetween && dist_line_to_point <= support_pts_max_dist_)
               support_points.push_back(cluster[c]);
-          }
         }
 
         // now check if the inlier models a line by checking the minimum distance between all support points (avoid lines over gaps)
@@ -236,7 +221,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
         else
         {
             // remove goal, since it will be added in the subsequent iteration
-            support_points.pop_back();
+            //support_points.pop_back();
           // old:
 //             // add vertex 1 as single point
 //             geometry_msgs::Polygon point;
@@ -247,8 +232,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
            for (int k = 0; k < int(support_points.size()); ++k)
            {
               geometry_msgs::Polygon polygon;
-              polygon.points.resize(1);
-              support_points[k].toPointMsg(polygon.points.front());
+              convertPointToPolygon(support_points[k], polygon);
               lines = polygon; // back insertion
            }
         }

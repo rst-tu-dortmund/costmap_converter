@@ -159,7 +159,7 @@ double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, c
       u = ((point.x - line_start.x) * dx + (point.y - line_start.y)*dy) / length;
   
     if (is_inbetween)
-      *is_inbetween = (u>=0 && u<=1);
+      *is_inbetween = (u>=0.0 && u<=1.0);
     
     if (u <= 0)
       return std::sqrt(std::pow(point.x-line_start.x,2) + std::pow(point.y-line_start.y,2));

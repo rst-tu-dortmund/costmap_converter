@@ -192,6 +192,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      *    C++ implementation example: http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull ( GNU Free Documentation License 1.2 )
      *    Reference:  A. M. Andrew, "Another Efficient Algorithm for Convex Hulls in Two Dimensions", Info. Proc. Letters 9, 216-219 (1979).
      * 
+     * @remarks The last point is the same as the first one
      * @param cluster list of keypoints that should be converted into a polygon
      * @param[out] polygon the resulting convex polygon
      */  
