@@ -71,16 +71,22 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
     // Line extraction
-    support_pts_min_dist_ = 0.06;
-    nh.param("support_pts_min_dist_", support_pts_min_dist_, support_pts_min_dist_);
+    support_pts_max_dist_ = 0.06;
+    nh.param("support_pts_max_dist", support_pts_max_dist_, support_pts_max_dist_);
     
     min_support_pts_ = 3;
-    nh.param("min_support_pts_", min_support_pts_, min_support_pts_);
+    nh.param("min_support_pts", min_support_pts_, min_support_pts_);
     
     // setup dynamic reconfigure
     dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>(nh);
     dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToLinesDBSMCCH::reconfigureCB, this, _1, _2);
     dynamic_recfg_->setCallback(cb);
+    
+    // deprecated
+    if (nh.hasParam("support_pts_min_dist_") || nh.hasParam("support_pts_min_dist"))
+      ROS_WARN("CostmapToLinesDBSMCCH: Parameter 'support_pts_min_dist' is deprecated and not included anymore.");
+    if (nh.hasParam("min_support_pts_"))
+      ROS_WARN("CostmapToLinesDBSMCCH: Parameter 'min_support_pts_' is not found. Remove the underscore.");
 }  
   
 void CostmapToLinesDBSMCCH::compute()
@@ -133,8 +139,31 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
   
    for (int i=0; i<(int)polygon.points.size() - 1; ++i) // this implemenation requires a closed polygon (start vertex = end vertex)
    {
-        const geometry_msgs::Point32& vertex1 = polygon.points[i];
-        const geometry_msgs::Point32& vertex2 = polygon.points[i+1];
+        const geometry_msgs::Point32* vertex1 = &polygon.points[i];
+        const geometry_msgs::Point32* vertex2 = &polygon.points[i+1];
+        
+        // check how many vertices belong to the line (sometimes the convex hull algorithm finds multiple vertices on a line,
+        // in case of small coordinate deviations)
+        double dx = vertex2->x - vertex1->x;
+        double dy = vertex2->y - vertex1->y;
+        double norm = std::sqrt(dx*dx + dy*dy);
+        dx /= norm;
+        dy /= norm;
+        for (int j=i; j<(int)polygon.points.size() - 2; ++j)
+        {
+          const geometry_msgs::Point32* vertex_jp2 = &polygon.points[j+2];
+          double dx2 = vertex_jp2->x - vertex2->x;
+          double dy2 = vertex_jp2->y - vertex2->y;
+          double norm2 = std::sqrt(dx2*dx2 + dy2*dy2);
+          dx2 /= norm2;
+          dy2 /= norm2;
+          if (std::abs(dx*dx2 + dy*dy2) < 0.05) //~3 degree
+          {
+            vertex2 = &polygon.points[j+2];
+            i = j; // DO NOT USE "i" afterwards
+          }
+          else break;
+        }
        
         bool vertex1_is_part_of_a_line = false;
         
@@ -143,23 +172,24 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
         
         for(int c = 0; c < cluster.size(); ++c)
         {
-          if((cluster[c].x == vertex1.x && cluster[c].y == vertex1.y) || (cluster[c].x == vertex2.x && cluster[c].y == vertex2.y))
+          if((cluster[c].x == vertex1->x && cluster[c].y == vertex1->y) || (cluster[c].x == vertex2->x && cluster[c].y == vertex2->y))
           {  
             continue;
           }
           else
           {
-            double dist_line_to_point = computeDistanceToLineSegment( cluster[c], vertex1, vertex2 );
+            bool is_inbetween = false;
+            double dist_line_to_point = computeDistanceToLineSegment( cluster[c], *vertex1, *vertex2, &is_inbetween );
 
-            if(dist_line_to_point <= support_pts_min_dist_)
+            if(is_inbetween && dist_line_to_point <= support_pts_max_dist_)
             {
               support_points++;
               if (support_points >= min_support_pts_)
               {
                 // line found:
                 geometry_msgs::Polygon line;
-                line.points.push_back(vertex1);
-                line.points.push_back(vertex2);
+                line.points.push_back(*vertex1);
+                line.points.push_back(*vertex2);
                 lines = line; // back insertion
                 vertex1_is_part_of_a_line = true;
                 break;
@@ -172,7 +202,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
         {
             // add vertex 1 as single point
             geometry_msgs::Polygon point;
-            point.points.push_back(vertex1);
+            point.points.push_back(*vertex1);
             lines = point; // back insertion
         }
     }
@@ -185,7 +215,7 @@ void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, u
     max_distance_ = config.cluster_max_distance;
     min_pts_ = config.cluster_min_pts;
     min_keypoint_separation_ = config.cluster_min_pts;
-    support_pts_min_dist_ = config.support_pts_min_dist;
+    support_pts_max_dist_ = config.support_pts_max_dist;
     min_support_pts_ = config.min_support_pts;
 }
 

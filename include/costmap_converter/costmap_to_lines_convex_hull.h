@@ -96,12 +96,13 @@ namespace costmap_converter
      * @param point generic 2D point type defining the reference point
      * @param line_start generic 2D point type defining the start of the line
      * @param line_end generic 2D point type defining the end of the line
+     * @param[out] is_inbetween write \c true, if the point is placed inbetween start and end [optional]
      * @tparam Point generic point type that should provide (writable) x and y member fiels.
      * @tparam LinePoint generic point type that should provide (writable) x and y member fiels.
      * @return (minimum) eucldian distance to the line segment
      */
     template <typename Point, typename LinePoint>
-    static double computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end);
+    static double computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween=NULL);
     
   protected:
     
@@ -116,7 +117,7 @@ namespace costmap_converter
     
   protected:
         
-    double support_pts_min_dist_;
+    double support_pts_max_dist_;
     int min_support_pts_;
    
   private:
@@ -143,7 +144,7 @@ namespace costmap_converter
   
   
 template <typename Point, typename LinePoint> 
-double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end)
+double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween)
 {
     double dx = line_end.x - line_start.x;
     double dy = line_end.y - line_start.y;
@@ -153,8 +154,11 @@ double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, c
     double u = 0;
     
     if (length>0)
-     u = ((point.x - line_start.x) * dx + (point.y - line_start.y)*dy) / length;
+      u = ((point.x - line_start.x) * dx + (point.y - line_start.y)*dy) / length;
   
+    if (is_inbetween)
+      *is_inbetween = (u>=0 && u<=1);
+    
     if (u <= 0)
       return std::sqrt(std::pow(point.x-line_start.x,2) + std::pow(point.y-line_start.y,2));
     
