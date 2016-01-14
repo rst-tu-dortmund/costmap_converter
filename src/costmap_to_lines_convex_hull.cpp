@@ -125,11 +125,13 @@ void CostmapToLinesDBSMCCH::compute()
     updatePolygonContainer(polygons);
 }
 
+typedef CostmapToLinesDBSMCCH CL;
+bool sort_keypoint_x(const std::size_t& i, const std::size_t& j, const std::vector<CL::KeyPoint>& cluster) 
+{ return (cluster[i].x<cluster[j].x) || (cluster[i].x == cluster[j].x && cluster[i].y < cluster[j].y); }
+bool sort_keypoint_y(const std::size_t& i, const std::size_t& j, const std::vector<CL::KeyPoint>& cluster) 
+{ return (cluster[i].y<cluster[j].y) || (cluster[i].y == cluster[j].y && cluster[i].x < cluster[j].x); }
 
-bool sort_keypoint_x(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.x<j.x) || (i.x == j.x && i.y < j.y); }
-bool sort_keypoint_y(const CostmapToLinesDBSMCCH::KeyPoint& i, const CostmapToLinesDBSMCCH::KeyPoint& j) { return (i.y<j.y) || (i.y == j.y && i.x < j.x); }
-
-void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon,
+void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon,
                                                   std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines)
 {
    if (polygon.points.empty())
@@ -171,15 +173,18 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
 //         }
        
         //Search support points
-        std::vector<KeyPoint> support_points;
+        std::vector<std::size_t> support_points; // store indices of cluster
         
-        for(int c = 0; c < (int)cluster.size(); ++c)
+        for (std::size_t k = 0; k < cluster.size(); ++k)
         {
             bool is_inbetween = false;
-            double dist_line_to_point = computeDistanceToLineSegment( cluster[c], *vertex1, *vertex2, &is_inbetween );
+            double dist_line_to_point = computeDistanceToLineSegment( cluster[k], *vertex1, *vertex2, &is_inbetween );
 
             if(is_inbetween && dist_line_to_point <= support_pts_max_dist_)
-              support_points.push_back(cluster[c]);
+            {
+              support_points.push_back(k);
+              continue;
+            }
         }
 
         // now check if the inlier models a line by checking the minimum distance between all support points (avoid lines over gaps)
@@ -189,15 +194,15 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
         {          
           // sort points
           if (std::abs(dx) >= std::abs(dy))
-            std::sort(support_points.begin(), support_points.end(), sort_keypoint_x);
+            std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_x, _1, _2, boost::cref(cluster)));
           else 
-            std::sort(support_points.begin(), support_points.end(), sort_keypoint_y);
+            std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_y, _1, _2, boost::cref(cluster)));
           
           // now calculate distances
           for (int k = 1; k < int(support_points.size()); ++k)
           {
-            double dist_x = support_points[k].x - support_points[k-1].x;
-            double dist_y = support_points[k].y - support_points[k-1].y;
+            double dist_x = cluster[support_points[k]].x - cluster[support_points[k-1]].x;
+            double dist_y = cluster[support_points[k]].y - cluster[support_points[k-1]].y;
             double dist = std::sqrt( dist_x*dist_x + dist_y*dist_y);
             if (dist > support_pts_max_dist_inbetween_)
             {
@@ -217,6 +222,14 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
           line.points.push_back(*vertex1);
           line.points.push_back(*vertex2);
           lines = line; // back insertion
+          
+          // remove inlier from list
+          // iterate in reverse order, otherwise indices are not valid after erasing elements
+          std::vector<std::size_t>::reverse_iterator support_it = support_points.rbegin();
+          for (; support_it != support_points.rend(); ++support_it)
+          {
+            cluster.erase(cluster.begin() + *support_it);
+          }
         }
         else
         {
@@ -232,12 +245,19 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(const std::vector<KeyPoint>& c
            for (int k = 0; k < int(support_points.size()); ++k)
            {
               geometry_msgs::Polygon polygon;
-              convertPointToPolygon(support_points[k], polygon);
+              convertPointToPolygon(cluster[support_points[k]], polygon);
               lines = polygon; // back insertion
            }
         }
     }
  
+    // add all remaining cluster points, that do not belong to a line
+    for (int i=0; i<(int)cluster.size();++i)
+    {
+        geometry_msgs::Polygon polygon;
+        convertPointToPolygon(cluster[i], polygon);
+        lines = polygon; // back insertion
+    }
 
 }
 

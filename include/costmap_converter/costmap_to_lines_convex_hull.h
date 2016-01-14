@@ -112,7 +112,7 @@ namespace costmap_converter
      * @param polygon convex hull of the cluster \c cluster
      * @param[out] lines back_inserter object to a sequence of polygon msgs (new lines will be pushed back)
      */
-    void extractPointsAndLines(const std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon, std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines);
+    void extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon, std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines);
 
     
     
