@@ -113,10 +113,12 @@ namespace costmap_converter
      * @param[out] lines back_inserter object to a sequence of polygon msgs (new lines will be pushed back)
      */
     void extractPointsAndLines(const std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon, std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines);
+
     
     
   protected:
-        
+      
+    double support_pts_max_dist_inbetween_;
     double support_pts_max_dist_;
     int min_support_pts_;
    
