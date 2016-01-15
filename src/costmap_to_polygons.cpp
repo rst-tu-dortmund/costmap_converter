@@ -91,7 +91,7 @@ void CostmapToPolygonsDBSMCCH::compute()
     for (int i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
       polygons->push_back( geometry_msgs::Polygon() );
-      convexHull(clusters[i], polygons->back() );
+      convexHull2(clusters[i], polygons->back() );
     }
     
     // add our non-cluster points to the polygon container (as single points)
@@ -184,11 +184,12 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
             visited[neighbors[j]] = true;  // mark as visited
             std::vector<int> further_neighbors;
             regionQuery(occupied_cells, neighbors[j], further_neighbors); //Find more neighbors around the new keypoint
-            if(further_neighbors.size() < min_pts_)
-            {	  
-              clusters[0].push_back(occupied_cells[neighbors[j]]);
-            }
-            else
+//             if(further_neighbors.size() < min_pts_)
+//             {	  
+//               clusters[0].push_back(occupied_cells[neighbors[j]]);
+//             }
+//             else
+            if (further_neighbors.size() >= min_pts_)
             {
               // neighbors found
               neighbors.insert(neighbors.end(), further_neighbors.begin(), further_neighbors.end());  //Add these newfound P' neighbour to P neighbour vector "nb_indeces"
@@ -273,6 +274,123 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     }
 }
 
+
+
+void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon)
+{
+    std::vector<KeyPoint> P = cluster;
+    std::vector<geometry_msgs::Point32>& points = polygon.points;
+
+    // Sort P by x and y
+    for (int i = 0; i < P.size(); i++)
+    {
+        for (int j = i + 1; j < P.size(); j++) 
+        {
+            if (P[j].x < P[i].x || (P[j].x == P[i].x && P[j].y < P[i].y))
+            {
+                KeyPoint tmp = P[i];
+                P[i] = P[j];
+                P[j] = tmp;
+            }
+        }
+    }
+
+    // the output array H[] will be used as the stack
+    int i;                 // array scan index
+
+    // Get the indices of points with min x-coord and min|max y-coord
+    int minmin = 0, minmax;
+    double xmin = P[0].x;
+    for (i = 1; i < P.size(); i++)
+        if (P[i].x != xmin) break;
+    minmax = i - 1;
+    if (minmax == (int)P.size() - 1)
+    {   // degenerate case: all x-coords == xmin
+        points.push_back(geometry_msgs::Point32());
+        P[minmin].toPointMsg(points.back());
+        if (P[minmax].y != P[minmin].y) // a  nontrivial segment
+        {
+            points.push_back(geometry_msgs::Point32());
+            P[minmax].toPointMsg(points.back());
+        }
+        // add polygon endpoint
+        points.push_back(geometry_msgs::Point32());
+        P[minmin].toPointMsg(points.back());
+        return;
+    }
+
+    // Get the indices of points with max x-coord and min|max y-coord
+    int maxmin, maxmax = (int)P.size() - 1;
+    double xmax = P.back().x;
+    for (i = P.size() - 2; i >= 0; i--)
+        if (P[i].x != xmax) break;
+    maxmin = i+1;
+
+    // Compute the lower hull on the stack H
+    // push  minmin point onto stack
+    points.push_back(geometry_msgs::Point32());
+    P[minmin].toPointMsg(points.back());
+    i = minmax;
+    while (++i <= maxmin)
+    {
+        // the lower line joins P[minmin]  with P[maxmin]
+        if (cross(P[minmin], P[maxmin], P[i]) >= 0 && i < maxmin)
+            continue;           // ignore P[i] above or on the lower line
+
+        while (points.size() > 1)         // there are at least 2 points on the stack
+        {
+            // test if  P[i] is left of the line at the stack top
+            if (cross(points[points.size() - 2], points.back(), P[i]) > 0)
+                break;         // P[i] is a new hull  vertex
+            points.pop_back();         // pop top point off  stack
+        }
+        // push P[i] onto stack
+        points.push_back(geometry_msgs::Point32());
+        P[i].toPointMsg(points.back());
+    }
+
+    // Next, compute the upper hull on the stack H above  the bottom hull
+    if (maxmax != maxmin)      // if  distinct xmax points
+    {
+         // push maxmax point onto stack
+         points.push_back(geometry_msgs::Point32());
+         P[maxmax].toPointMsg(points.back());
+    }
+    int bot = (int)points.size();                  // the bottom point of the upper hull stack
+    i = maxmin;
+    while (--i >= minmax)
+    {
+        // the upper line joins P[maxmax]  with P[minmax]
+        if (cross( P[maxmax], P[minmax], P[i])  >= 0 && i > minmax)
+            continue;           // ignore P[i] below or on the upper line
+
+        while (points.size() > bot)     // at least 2 points on the upper stack
+        {
+            // test if  P[i] is left of the line at the stack top
+            if (cross(points[points.size() - 2], points.back(), P[i]) > 0)
+                break;         // P[i] is a new hull  vertex
+            points.pop_back();         // pop top point off stack
+        }
+        // push P[i] onto stack
+        points.push_back(geometry_msgs::Point32());
+        P[i].toPointMsg(points.back());
+    }
+    if (minmax != minmin)
+    {
+        // push  joining endpoint onto stack
+        points.push_back(geometry_msgs::Point32());
+        P[minmin].toPointMsg(points.back());
+    }
+    
+    if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
+    {
+      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
+      {
+        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < min_keypoint_separation_ )
+          polygon.points.erase(polygon.points.begin()+i+1);
+      }
+    }
+}
 
 void CostmapToPolygonsDBSMCCH::updatePolygonContainer(PolygonContainerPtr polygons)
 {

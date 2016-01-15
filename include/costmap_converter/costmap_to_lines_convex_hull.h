@@ -91,18 +91,6 @@ namespace costmap_converter
      */
     virtual void compute();   
     
-    /**
-     * @brief Calculate the distance between a point and a line segment
-     * @param point generic 2D point type defining the reference point
-     * @param line_start generic 2D point type defining the start of the line
-     * @param line_end generic 2D point type defining the end of the line
-     * @param[out] is_inbetween write \c true, if the point is placed inbetween start and end [optional]
-     * @tparam Point generic point type that should provide (writable) x and y member fiels.
-     * @tparam LinePoint generic point type that should provide (writable) x and y member fiels.
-     * @return (minimum) eucldian distance to the line segment
-     */
-    template <typename Point, typename LinePoint>
-    static double computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween=NULL);
     
   protected:
     
@@ -140,35 +128,7 @@ namespace costmap_converter
   
   
   
-  
-  
-  
-  
-  
-template <typename Point, typename LinePoint> 
-double CostmapToLinesDBSMCCH::computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween)
-{
-    double dx = line_end.x - line_start.x;
-    double dy = line_end.y - line_start.y;
-    
-    double length = std::sqrt(dx*dx + dy*dy);
-    
-    double u = 0;
-    
-    if (length>0)
-      u = ((point.x - line_start.x) * dx + (point.y - line_start.y)*dy) / length;
-  
-    if (is_inbetween)
-      *is_inbetween = (u>=0.0 && u<=1.0);
-    
-    if (u <= 0)
-      return std::sqrt(std::pow(point.x-line_start.x,2) + std::pow(point.y-line_start.y,2));
-    
-    if (u >= 1)
-      return std::sqrt(std::pow(point.x-line_end.x,2) + std::pow(point.y-line_end.y,2));
-    
-    return std::sqrt(std::pow(point.x - (line_start.x+u*dx) ,2) + std::pow(point.y - (line_start.y+u*dy),2));
-}
+
 
   
   

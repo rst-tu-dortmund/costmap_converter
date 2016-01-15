@@ -134,7 +134,7 @@ void CostmapToLinesDBSRANSAC::compute()
           // these points define a cluster and since all lines are extracted,
           // we remove points from the interior...
           geometry_msgs::Polygon polygon;
-          convexHull(clusters[i], polygon);
+          convexHull2(clusters[i], polygon);
           for (int j=0; j < (int)polygon.points.size(); ++j)
           {
             polygons->push_back(geometry_msgs::Polygon());

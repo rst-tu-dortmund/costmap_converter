@@ -86,6 +86,7 @@ find_package(catkin REQUIRED COMPONENTS
 #find_package(catkin REQUIRED dynamic_reconfigure)
 generate_dynamic_reconfigure_options(
   cfg/dynamic_reconfigure/CostmapToPolygonsDBSMCCH.cfg
+  cfg/dynamic_reconfigure/CostmapToPolygonsDBSConcaveHull.cfg
   cfg/dynamic_reconfigure/CostmapToLinesDBSMCCH.cfg
   cfg/dynamic_reconfigure/CostmapToLinesDBSRANSAC.cfg
 )
@@ -126,6 +127,7 @@ include_directories(
 
 ## Declare a cpp library
 add_library(costmap_converter 	src/costmap_to_polygons.cpp 
+				src/costmap_to_polygons_concave.cpp
 				src/costmap_to_lines_convex_hull.cpp
 				src/costmap_to_lines_ransac.cpp)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  

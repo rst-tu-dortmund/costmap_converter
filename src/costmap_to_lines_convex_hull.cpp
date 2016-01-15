@@ -37,6 +37,7 @@
  *********************************************************************/
 
 #include <costmap_converter/costmap_to_lines_convex_hull.h>
+#include <costmap_converter/misc.h>
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <pluginlib/class_list_macros.h>
@@ -104,7 +105,7 @@ void CostmapToLinesDBSMCCH::compute()
     for (int i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
       geometry_msgs::Polygon polygon;
-      convexHull(clusters[i], polygon );
+      convexHull2(clusters[i], polygon );
       
       // now extract lines of the polygon (by searching for support points in the cluster)  
       // and add them to the polygon container

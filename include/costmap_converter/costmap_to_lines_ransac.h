@@ -41,6 +41,7 @@
 
 #include <costmap_converter/costmap_converter_interface.h>
 #include <costmap_converter/costmap_to_polygons.h>
+#include <costmap_converter/misc.h>
 #include <boost/random.hpp>
 
 #include <costmap_converter/CostmapToLinesDBSRANSACConfig.h>
@@ -91,33 +92,7 @@ namespace costmap_converter
      * @brief This method performs the actual work (conversion of the costmap to polygons)
      */
     virtual void compute();   
-    
-    
-    /**
-     * @brief Calculate the distance between a point and a straight line (with infinite length)
-     * @param point generic 2D point type defining the reference point
-     * @param line_pt1 generic 2D point as part of the line
-     * @param line_pt2 generic 2D point as part of the line
-     * @tparam Point generic point type that should provide (writable) x and y member fiels.
-     * @tparam LinePoint generic point type that should provide (writable) x and y member fiels.
-     * @return (minimum) eucldian distance to the line segment
-     */
-    template <typename Point, typename LinePoint>
-    static double computeDistanceToLine(const Point& point, const LinePoint& line_pt1, const LinePoint& line_pt2);
-    
-    /**
-     * @brief Calculate the distance between a point and a straight line segment
-     * @param point generic 2D point type defining the reference point
-     * @param line_start generic 2D point type defining the start of the line
-     * @param line_end generic 2D point type defining the end of the line
-     * @param[out] is_inbetween write \c true, if the point is placed inbetween start and end [optional]
-     * @tparam Point generic point type that should provide (writable) x and y member fiels.
-     * @tparam LinePoint generic point type that should provide (writable) x and y member fiels.
-     * @return (minimum) eucldian distance to the line segment
-     */
-    template <typename Point, typename LinePoint>
-    static double computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween=NULL);
-    
+        
      
     /**
      * @brief Check if the candidate point is an inlier.
@@ -193,50 +168,6 @@ namespace costmap_converter
   };  
   
   
-  
-  
-  
-  
-  
-template <typename Point, typename LinePoint> 
-double CostmapToLinesDBSRANSAC::computeDistanceToLine(const Point& point, const LinePoint& line_pt1, const LinePoint& line_pt2)
-{
-    double dx = line_pt2.x - line_pt1.x;
-    double dy = line_pt2.y - line_pt1.y;
-    
-    double length = std::sqrt(dx*dx + dy*dy);
-    
-    if (length>0)
-      return std::abs(dy * point.x - dx * point.y + line_pt2.x * line_pt1.y - line_pt2.y * line_pt1.x) / length;
-   
-    return std::sqrt(std::pow(point.x - line_pt1.x, 2) + std::pow(point.y - line_pt1.y, 2));  
-}
-
-  
-template <typename Point, typename LinePoint> 
-double CostmapToLinesDBSRANSAC::computeDistanceToLineSegment(const Point& point, const LinePoint& line_start, const LinePoint& line_end, bool* is_inbetween)
-{
-    double dx = line_end.x - line_start.x;
-    double dy = line_end.y - line_start.y;
-    
-    double length = std::sqrt(dx*dx + dy*dy);
-    
-    double u = 0;
-    
-    if (length>0)
-     u = ((point.x - line_start.x) * dx + (point.y - line_start.y)*dy) / length;
-    
-    if (is_inbetween)
-      *is_inbetween = (u>=0 && u<=1);
-  
-    if (u <= 0)
-      return std::sqrt(std::pow(point.x-line_start.x,2) + std::pow(point.y-line_start.y,2));
-    
-    if (u >= 1)
-      return std::sqrt(std::pow(point.x-line_end.x,2) + std::pow(point.y-line_end.y,2));
-    
-    return std::sqrt(std::pow(point.x - (line_start.x+u*dx) ,2) + std::pow(point.y - (line_start.y+u*dy),2));
-}  
 
 template <typename Point, typename LinePoint>
 bool CostmapToLinesDBSRANSAC::isInlier(const Point& point, const LinePoint& line_start, const LinePoint& line_end, double min_distance)
@@ -249,8 +180,7 @@ bool CostmapToLinesDBSRANSAC::isInlier(const Point& point, const LinePoint& line
     return true;
   return false;
 }
-
-  
+     
   
 } //end namespace teb_local_planner
 
