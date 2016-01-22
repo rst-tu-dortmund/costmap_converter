@@ -130,6 +130,7 @@ add_library(costmap_converter 	src/costmap_to_polygons.cpp
 				src/costmap_to_lines_ransac.cpp)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
 
+
 ## Declare a cpp executable
 add_executable(standalone_converter src/costmap_converter_node.cpp)
 target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
@@ -138,6 +139,9 @@ target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(drawing_node drawing_generate_messages_cpp)
+
+# Dynamic reconfigure: make sure configure headers are built before any node using them
+add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
 
 ## Specify libraries to link a library or executable target against
 
