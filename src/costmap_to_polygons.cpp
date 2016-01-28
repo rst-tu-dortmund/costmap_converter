@@ -68,6 +68,9 @@ void CostmapToPolygonsDBSMCCH::initialize(ros::NodeHandle nh)
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
     
+    max_pts_ = 30;
+    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    
     min_keypoint_separation_ = 0.1;
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
@@ -179,6 +182,9 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
         clusters[cluster_id].push_back(occupied_cells[i]);
         for(int j = 0; j<neighbors.size(); j++)
         {
+          if ((int)clusters[cluster_id].size() == max_pts_)
+            break;
+          
           if(!visited[neighbors[j]]) //keypoint has not been visited before
           {
             visited[neighbors[j]] = true;  // mark as visited
@@ -410,6 +416,7 @@ void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& con
 {
     max_distance_ = config.cluster_max_distance;
     min_pts_ = config.cluster_min_pts;
+    max_pts_ = config.cluster_max_pts;
     min_keypoint_separation_ = config.cluster_min_pts;
 }
 

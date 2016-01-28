@@ -65,6 +65,9 @@ void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
     
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
+    
+    max_pts_ = 30;
+    nh.param("cluster_max_pts", max_pts_, max_pts_);
 
     // ransac
     ransac_inlier_distance_ = 0.2;
@@ -296,6 +299,7 @@ void CostmapToLinesDBSRANSAC::reconfigureCB(CostmapToLinesDBSRANSACConfig& confi
 {
     max_distance_ = config.cluster_max_distance;
     min_pts_ = config.cluster_min_pts;
+    max_pts_ = config.cluster_max_pts;
     ransac_inlier_distance_ = config.ransac_inlier_distance;
     ransac_min_inliers_ = config.ransac_min_inliers;
     ransac_no_iterations_ = config.ransac_no_iterations;

@@ -67,6 +67,9 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
     
+    max_pts_ = 30;
+    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    
     // convex hull
     min_keypoint_separation_ = 0.1;
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
@@ -266,6 +269,7 @@ void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, u
 {
     max_distance_ = config.cluster_max_distance;
     min_pts_ = config.cluster_min_pts;
+    max_pts_ = config.cluster_max_pts;
     min_keypoint_separation_ = config.cluster_min_pts;
     support_pts_max_dist_ = config.support_pts_max_dist;
     min_support_pts_ = config.min_support_pts;

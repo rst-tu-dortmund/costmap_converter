@@ -242,6 +242,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
    // DBSCAN parameters
    double max_distance_; //!< Parameter for DB_Scan, maximum distance to neighbors [m]
    int min_pts_; //!< Parameter for DB_Scan: minimum number of points that define a cluster
+   int max_pts_; //!< Parameter for DB_Scan: maximum number of points that define a cluster (to avoid large L- and U-shapes)
    
    // convex hull parameters
    double min_keypoint_separation_; //!< Clear keypoints of the convex polygon that are close to each other [distance in meters] (0: keep all)
