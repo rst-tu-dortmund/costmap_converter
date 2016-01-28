@@ -65,6 +65,9 @@ void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
     
     min_pts_ = 2;
     nh.param("cluster_min_pts", min_pts_, min_pts_);
+    
+    max_pts_ = 30;
+    nh.param("cluster_max_pts", max_pts_, max_pts_);
 
     // ransac
     ransac_inlier_distance_ = 0.2;
@@ -134,7 +137,7 @@ void CostmapToLinesDBSRANSAC::compute()
           // these points define a cluster and since all lines are extracted,
           // we remove points from the interior...
           geometry_msgs::Polygon polygon;
-          convexHull(clusters[i], polygon);
+          convexHull2(clusters[i], polygon);
           for (int j=0; j < (int)polygon.points.size(); ++j)
           {
             polygons->push_back(geometry_msgs::Polygon());
@@ -296,6 +299,7 @@ void CostmapToLinesDBSRANSAC::reconfigureCB(CostmapToLinesDBSRANSACConfig& confi
 {
     max_distance_ = config.cluster_max_distance;
     min_pts_ = config.cluster_min_pts;
+    max_pts_ = config.cluster_max_pts;
     ransac_inlier_distance_ = config.ransac_inlier_distance;
     ransac_min_inliers_ = config.ransac_min_inliers;
     ransac_no_iterations_ = config.ransac_no_iterations;
