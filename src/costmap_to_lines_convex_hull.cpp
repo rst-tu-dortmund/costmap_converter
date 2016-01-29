@@ -71,12 +71,13 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
     nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
     // Line extraction
-    support_pts_max_dist_ = 0.1;
+    support_pts_max_dist_ = 0.3;
     nh.param("support_pts_max_dist", support_pts_max_dist_, support_pts_max_dist_);
     
-    support_pts_max_dist_inbetween_ = max_distance_;
+    support_pts_max_dist_inbetween_ = 1.0;
+    nh.param("support_pts_max_dist_inbetween", support_pts_max_dist_inbetween_, support_pts_max_dist_inbetween_);
     
-    min_support_pts_ = 3;
+    min_support_pts_ = 2;
     nh.param("min_support_pts", min_support_pts_, min_support_pts_);
     
     // setup dynamic reconfigure
@@ -188,32 +189,35 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
         }
 
         // now check if the inlier models a line by checking the minimum distance between all support points (avoid lines over gaps)
-        // and by checking if the minium number of points is reached
+        // and by checking if the minium number of points is reached // deactivate by setting support_pts_max_dist_inbetween_==0
         bool is_line=true;
-        if ((int)support_points.size() >= min_support_pts_ + 2) // +2 since start and goal are included
-        {          
-          // sort points
-          if (std::abs(dx) >= std::abs(dy))
-            std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_x, _1, _2, boost::cref(cluster)));
-          else 
-            std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_y, _1, _2, boost::cref(cluster)));
-          
-          // now calculate distances
-          for (int k = 1; k < int(support_points.size()); ++k)
-          {
-            double dist_x = cluster[support_points[k]].x - cluster[support_points[k-1]].x;
-            double dist_y = cluster[support_points[k]].y - cluster[support_points[k-1]].y;
-            double dist = std::sqrt( dist_x*dist_x + dist_y*dist_y);
-            if (dist > support_pts_max_dist_inbetween_)
+        if (support_pts_max_dist_inbetween_!=0)
+        {
+          if ((int)support_points.size() >= min_support_pts_ + 2) // +2 since start and goal are included
+          {          
+            // sort points
+            if (std::abs(dx) >= std::abs(dy))
+              std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_x, _1, _2, boost::cref(cluster)));
+            else 
+              std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_y, _1, _2, boost::cref(cluster)));
+            
+            // now calculate distances
+            for (int k = 1; k < int(support_points.size()); ++k)
             {
-              is_line = false;
-              break;
+              double dist_x = cluster[support_points[k]].x - cluster[support_points[k-1]].x;
+              double dist_y = cluster[support_points[k]].y - cluster[support_points[k-1]].y;
+              double dist = std::sqrt( dist_x*dist_x + dist_y*dist_y);
+              if (dist > support_pts_max_dist_inbetween_)
+              {
+                is_line = false;
+                break;
+              }
             }
+            
           }
-          
+          else
+            is_line = false;
         }
-        else
-          is_line = false;
         
         if (is_line)
         {
@@ -242,12 +246,24 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
 //             lines = point; // back insertion
 
            // add complete inlier set as points 
-           for (int k = 0; k < int(support_points.size()); ++k)
-           {
-              geometry_msgs::Polygon polygon;
-              convertPointToPolygon(cluster[support_points[k]], polygon);
-              lines = polygon; // back insertion
-           }
+//            for (int k = 0; k < int(support_points.size()); ++k)
+//            {
+//               geometry_msgs::Polygon polygon;
+//               convertPointToPolygon(cluster[support_points[k]], polygon);
+//               lines = polygon; // back insertion
+//            }
+           
+          // remove inlier from list and add them as point obstacles
+          // iterate in reverse order, otherwise indices are not valid after erasing elements
+          std::vector<std::size_t>::reverse_iterator support_it = support_points.rbegin();
+          for (; support_it != support_points.rend(); ++support_it)
+          {
+            geometry_msgs::Polygon polygon;
+            convertPointToPolygon(cluster[*support_it], polygon);
+            lines = polygon; // back insertion
+            
+            cluster.erase(cluster.begin() + *support_it);
+          }
         }
     }
  
@@ -267,6 +283,7 @@ void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, u
     min_pts_ = config.cluster_min_pts;
     min_keypoint_separation_ = config.cluster_min_pts;
     support_pts_max_dist_ = config.support_pts_max_dist;
+    support_pts_max_dist_inbetween_ = config.support_pts_max_dist_inbetween;
     min_support_pts_ = config.min_support_pts;
 }
 
