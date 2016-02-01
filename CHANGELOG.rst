@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.5 (2016-02-01)
+------------------
 * Major changes regarding the line detection based on the convex hull
   (it should be much more robust now).
 * Concave hull plugin added.
