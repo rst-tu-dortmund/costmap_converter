@@ -2,6 +2,17 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Major changes regarding the line detection based on the convex hull
+  (it should be much more robust now).
+* Concave hull plugin added.
+* The cluster size can now be limited from above using a specific parameter.
+  This implicitly avoids large clusters forming a 'L' or 'U'.
+* All parameters can now be adjusted using dynamic_reconfigure (rqt_reconfigure).
+* Some parameter names changed.
+* Line plugin based on ransac: line inliers must now be placed inbetween the start and end of a line.
+
 0.0.4 (2016-01-11)
 ------------------
 * Fixed conversion from map to world coordinates if the costmap is not quadratic.
