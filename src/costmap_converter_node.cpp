@@ -103,10 +103,10 @@ public:
       }
       
       
-      for (int i=0; i < msg->data.size(); ++i)
+      for (std::size_t i=0; i < msg->data.size(); ++i)
       {
         unsigned int mx, my;
-        map.indexToCells(i, mx, my);
+        map.indexToCells((unsigned int)i, mx, my);
         map.setCost(mx, my, msg->data[i] >= occupied_min_value_ ? 255 : 0 );
       }
       
@@ -117,7 +117,7 @@ public:
       if (!polygons)
         return;
 
-      for (int i=0; i<polygons->size(); ++i)
+      for (std::size_t i=0; i < polygons->size(); ++i)
       {
          geometry_msgs::PolygonStamped polygon;
          polygon.header.frame_id = msg->header.frame_id;
@@ -147,9 +147,9 @@ public:
     line_list.color.g = 1.0;
     line_list.color.a = 1.0;
     
-    for (int i=0; i<polygons.size(); ++i)
+    for (std::size_t i=0; i<polygons.size(); ++i)
     {
-      for (int j=0; j<polygons[i].points.size()-1; ++j)
+      for (int j=0; j< (int)polygons[i].points.size()-1; ++j)
       {
         geometry_msgs::Point line_start;
         line_start.x = polygons[i].points[j].x;

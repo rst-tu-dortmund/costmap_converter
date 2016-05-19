@@ -91,7 +91,7 @@ void CostmapToPolygonsDBSMCCH::compute()
     
     
     // add convex hulls to polygon container
-    for (int i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
+    for (std::size_t i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
       polygons->push_back( geometry_msgs::Polygon() );
       convexHull2(clusters[i], polygons->back() );
@@ -100,7 +100,7 @@ void CostmapToPolygonsDBSMCCH::compute()
     // add our non-cluster points to the polygon container (as single points)
     if (!clusters.empty())
     {
-      for (int i=0; i < clusters.front().size(); ++i)
+      for (std::size_t i=0; i < clusters.front().size(); ++i)
       {
         polygons->push_back( geometry_msgs::Polygon() );
         convertPointToPolygon(clusters.front()[i], polygons->back());
@@ -136,15 +136,15 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
       costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
             
       // get indices of obstacle cells
-      for(int i = 0; i < costmap_->getSizeInCellsX(); i++)
+      for(std::size_t i = 0; i < costmap_->getSizeInCellsX(); i++)
       {
-        for(int j = 0; j < costmap_->getSizeInCellsY(); j++)
+        for(std::size_t j = 0; j < costmap_->getSizeInCellsY(); j++)
         {
           int value = costmap_->getCost(i,j);
           if(value >= costmap_2d::LETHAL_OBSTACLE)
           {
             double x, y;
-            costmap_->mapToWorld(i,j,x,y);
+            costmap_->mapToWorld((unsigned int)i, (unsigned int)j, x, y);
             occupied_cells_.push_back( KeyPoint( x, y ) );
           }
           ++idx;
@@ -162,14 +162,14 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
   //DB Scan Algorithm
   int cluster_id = 0; // current cluster_id
   clusters.push_back(std::vector<KeyPoint>());
-  for(int i = 0; i<occupied_cells.size(); i++)
+  for(int i = 0; i< (int)occupied_cells.size(); i++)
   {
     if(!visited[i]) //keypoint has not been visited before
     {
       visited[i] = true; // mark as visited
       std::vector<int> neighbors;
       regionQuery(occupied_cells, i, neighbors); //Find neighbors around the keypoint
-      if(neighbors.size() < min_pts_) //If not enough neighbors are found, mark as noise
+      if((int)neighbors.size() < min_pts_) //If not enough neighbors are found, mark as noise
       {		
         clusters[0].push_back(occupied_cells[i]);
       }
@@ -180,7 +180,7 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
         
         // Expand the cluster
         clusters[cluster_id].push_back(occupied_cells[i]);
-        for(int j = 0; j<neighbors.size(); j++)
+        for(int j = 0; j<(int)neighbors.size(); j++)
         {
           if ((int)clusters[cluster_id].size() == max_pts_)
             break;
@@ -195,7 +195,7 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
 //               clusters[0].push_back(occupied_cells[neighbors[j]]);
 //             }
 //             else
-            if (further_neighbors.size() >= min_pts_)
+            if ((int)further_neighbors.size() >= min_pts_)
             {
               // neighbors found
               neighbors.insert(neighbors.end(), further_neighbors.begin(), further_neighbors.end());  //Add these newfound P' neighbour to P neighbour vector "nb_indeces"
@@ -214,7 +214,7 @@ void CostmapToPolygonsDBSMCCH::regionQuery(const std::vector<KeyPoint>& occupied
     double curr_index_x = occupied_cells[curr_index].x;
     double curr_index_y = occupied_cells[curr_index].y;
 
-    for(int i = 0; i < occupied_cells.size(); i++)
+    for(int i = 0; i < (int)occupied_cells.size(); i++)
     {
       double neighbor_x = occupied_cells[i].x;
       double neighbor_y = occupied_cells[i].y;
@@ -288,9 +288,9 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
     std::vector<geometry_msgs::Point32>& points = polygon.points;
 
     // Sort P by x and y
-    for (int i = 0; i < P.size(); i++)
+    for (int i = 0; i < (int)P.size(); i++)
     {
-        for (int j = i + 1; j < P.size(); j++) 
+        for (int j = i + 1; j < (int)P.size(); j++) 
         {
             if (P[j].x < P[i].x || (P[j].x == P[i].x && P[j].y < P[i].y))
             {
@@ -307,7 +307,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
     // Get the indices of points with min x-coord and min|max y-coord
     int minmin = 0, minmax;
     double xmin = P[0].x;
-    for (i = 1; i < P.size(); i++)
+    for (i = 1; i < (int)P.size(); i++)
         if (P[i].x != xmin) break;
     minmax = i - 1;
     if (minmax == (int)P.size() - 1)
@@ -370,7 +370,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
         if (cross( P[maxmax], P[minmax], P[i])  >= 0 && i > minmax)
             continue;           // ignore P[i] below or on the upper line
 
-        while (points.size() > bot)     // at least 2 points on the upper stack
+        while ((int)points.size() > bot)     // at least 2 points on the upper stack
         {
             // test if  P[i] is left of the line at the stack top
             if (cross(points[points.size() - 2], points.back(), P[i]) > 0)
