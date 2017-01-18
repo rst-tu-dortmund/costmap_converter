@@ -29,4 +29,9 @@
   </description>
   </class>
   
+    <class type="costmap_converter::CostmapToDynamicObstacles" base_class_type="costmap_converter::BaseCostmapToPolygons">
+  <description>
+      This class converts costmap2d obstacles into a vector dynamic obstacles. 
+  </description>
+  </class>
 </library>

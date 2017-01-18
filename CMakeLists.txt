@@ -13,11 +13,12 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   dynamic_reconfigure
   pluginlib
+  cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ###set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 ###find_package(Eigen3 REQUIRED)
@@ -129,7 +130,8 @@ include_directories(
 add_library(costmap_converter 	src/costmap_to_polygons.cpp 
 				src/costmap_to_polygons_concave.cpp
 				src/costmap_to_lines_convex_hull.cpp
-				src/costmap_to_lines_ransac.cpp)
+				src/costmap_to_lines_ransac.cpp
+				src/costmap_to_dynamic_obstacles.cpp)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
 
 
