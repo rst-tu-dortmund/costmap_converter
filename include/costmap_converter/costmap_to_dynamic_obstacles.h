@@ -48,9 +48,8 @@ private:
     costmap_2d::Costmap2D *costmap_;
     PolygonContainerPtr polygons_;
     cv::Mat _frame;
-//    OpencvTracking _my_tracking;        // TODO
-//    BackgroundSubtractionClass _bs;     // TODO
-//    BlobClass _blob;                    // TODO
+    // ObstacleContainerPtr obstacles_;
+    // Vector von n blobs
 }; 
 
   

@@ -20,20 +20,28 @@ namespace  costmap_converter
     void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
     {
         costmap_ = NULL;
+
+        // Parameter setzen..
     }
 
     void CostmapToDynamicObstacles::compute()
     {
-        // Blob Analyse erstmal ausgelassen.. In set_own_costmap ebenfalls auskommentiert
-        // TODO: OpencvTracking _my_tracking;
-        //       BackgroundSubtractionClass _bs;
-        //       BlobClass _blob;
+        // BackgroundSubtraction von Costmap (vorher in cv::Mat umwandeln, evtl Eigenbewegung abziehen)
+        // Blob detection
+        // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
+        // Geschwindigkeit berechnen, Kalman filter
+        // ObstacleContainerPtr mit Werten füllen
     }
 
     void CostmapToDynamicObstacles::setCostmap2D(costmap_2d::Costmap2D *costmap)
     {
         costmap_ = costmap;
         updateCostmap2D();
+    }
+
+    void CostmapToDynamicObstacles::updateCostmap2D()
+    {
+
     }
 
     void CostmapToDynamicObstacles::updatePolygonContainer(PolygonContainerPtr polygons)
