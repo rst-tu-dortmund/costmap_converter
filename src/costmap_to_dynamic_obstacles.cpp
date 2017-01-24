@@ -35,7 +35,11 @@ namespace  costmap_converter
 
     void CostmapToDynamicObstacles::setCostmap2D(costmap_2d::Costmap2D *costmap)
     {
+        if(!costmap)
+          return;
+
         costmap_ = costmap;
+
         updateCostmap2D();
     }
 
@@ -44,15 +48,15 @@ namespace  costmap_converter
 
     }
 
-    void CostmapToDynamicObstacles::updatePolygonContainer(PolygonContainerPtr polygons)
+    ObstacleContainerConstPtr CostmapToDynamicObstacles::getObstacles()
     {
         boost::mutex::scoped_lock lock(mutex_);
-        polygons_ = polygons;
+        return obstacles_;
     }
 
-    PolygonContainerConstPtr CostmapToDynamicObstacles::getPolygons()
+    void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleContainerPtr obstacles)
     {
         boost::mutex::scoped_lock lock(mutex_);
-        return polygons_;
+        obstacles_ = obstacles;
     }
 }
