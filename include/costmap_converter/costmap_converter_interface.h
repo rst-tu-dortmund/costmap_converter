@@ -119,7 +119,7 @@ public:
      * @warning The underlying plugin must ensure that this method is thread safe.
      * @return Shared instance of the current polygon container
      */
-    virtual PolygonContainerConstPtr getPolygons(){} //TODO: getPolygons() -> getObstacles()
+    virtual PolygonContainerConstPtr getPolygons(){return PolygonContainerConstPtr();} //TODO: getPolygons() -> getObstacles()
       
     
      /**
