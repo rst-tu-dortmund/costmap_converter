@@ -4,8 +4,8 @@
 #include <ros/ros.h>
 #include <costmap_converter/costmap_converter_interface.h>
 
-#include "cv_bridge/cv_bridge.h"
-
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/bgsegm.hpp>
 
 namespace costmap_converter
 {
@@ -86,9 +86,12 @@ protected:
 private:
     boost::mutex mutex_;
     costmap_2d::Costmap2D *costmap_;
+    cv::Mat costmapMat_;
     ObstacleContainerPtr obstacles_;
-    cv::Mat frame_;
     // Vector von n blobs
+    std::string background_subtraction_method_;
+    cv::Mat fgMask_;
+    cv::Ptr<cv::BackgroundSubtractor> bgSub_;      //MOG Background subtractor
 }; 
 
   

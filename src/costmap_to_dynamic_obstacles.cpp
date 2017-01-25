@@ -19,14 +19,25 @@ namespace  costmap_converter
 
     void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
     {
-        costmap_ = NULL;
+        background_subtraction_method_ = "MOG";
+        nh.param("background_subtraction_method", background_subtraction_method_, background_subtraction_method_);
 
+        if(background_subtraction_method_.compare("MOG"))
+          bgSub_ = cv::bgsegm::createBackgroundSubtractorMOG();
+        else if (background_subtraction_method_.compare("MOG2"))
+          bgSub_ = cv::createBackgroundSubtractorMOG2();
+        else
+          ROS_ERROR("Unknown background subtraction method. Try \"MOG\" or \"MOG2\".");
+
+        costmap_ = NULL;
         // Parameter setzen..
     }
 
     void CostmapToDynamicObstacles::compute()
     {
-        // BackgroundSubtraction von Costmap (vorher in cv::Mat umwandeln, evtl Eigenbewegung abziehen)
+        // BackgroundSubtraction (TODO: Eigenbewegung abziehen)
+        bgSub_->apply(costmapMat_, fgMask_);
+
         // Blob detection
         // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
         // Geschwindigkeit berechnen, Kalman filter
@@ -45,7 +56,19 @@ namespace  costmap_converter
 
     void CostmapToDynamicObstacles::updateCostmap2D()
     {
+        if (!costmap_->getMutex())
+        {
+          ROS_ERROR("Cannot update costmap since the mutex pointer is null");
+          return;
+        }
 
+        costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
+
+        // Initialize costmapMat_ directly with the unsigned char array of costmap_
+        costmapMat_=cv::Mat(costmap_->getSizeInCellsX(),
+                            costmap_->getSizeInCellsY(),
+                            CV_8UC1,
+                            costmap_->getCharMap());
     }
 
     ObstacleContainerConstPtr CostmapToDynamicObstacles::getObstacles()
