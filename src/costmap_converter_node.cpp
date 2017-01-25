@@ -181,7 +181,11 @@ public:
     marker_pub.publish(line_list);
   }
   
-
+  // workaround
+  void visualize()
+  {
+      converter_->visualize();
+  }
   
 private:
   pluginlib::ClassLoader<costmap_converter::BaseCostmapToPolygons> converter_loader_;
@@ -207,8 +211,15 @@ int main(int argc, char** argv)
   
   CostmapStandaloneConversion convert_process;
   
-  ros::spin();
-  
+  //ros::spin();
+  ros::Rate r(5);
+  while(ros::ok())
+  {
+    convert_process.visualize(); //workaround
+    ros::spinOnce();
+    r.sleep();
+  }
+
   costmap_2d::Costmap2D costmap;
   
   

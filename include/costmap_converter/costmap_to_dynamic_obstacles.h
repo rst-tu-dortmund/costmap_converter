@@ -59,6 +59,8 @@ public:
      */
     ObstacleContainerConstPtr getObstacles();
 
+    // OpenCV Visualization, workaround für freeze
+    virtual void visualize();
 
 protected:
     /**

@@ -2,6 +2,8 @@
 
 #include <pluginlib/class_list_macros.h>
 
+#include <opencv2/highgui/highgui.hpp> //TODO: Wieder raus, nur zum debuggen..
+
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToDynamicObstacles, costmap_converter::BaseCostmapToPolygons)
 
 
@@ -81,5 +83,22 @@ namespace  costmap_converter
     {
         boost::mutex::scoped_lock lock(mutex_);
         obstacles_ = obstacles;
+    }
+
+    //workaround
+    void CostmapToDynamicObstacles::visualize()
+    {
+      if(!costmapMat_.empty() && !costmapMat_.empty())
+      {
+        // Flip Mat to match rviz
+        cv::Mat costmap;
+        cv::flip(costmapMat_, costmap,0);
+        cv::imshow("Costmap matrix", costmap);
+
+        cv::Mat mask;
+        cv::flip(fgMask_,mask,0);
+        cv::imshow("Foreground mask", mask);
+        cv::waitKey(1);
+      }
     }
 }

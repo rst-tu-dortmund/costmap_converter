@@ -180,7 +180,9 @@ public:
       }
     }
 
-    
+    // workaround
+    virtual void visualize(){}
+
 protected:
   
     /**
