@@ -54,7 +54,7 @@ public:
   CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
       
-      std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
+      std::string converter_plugin = "costmap_converter::CostmapToDynamicObstacles";
       n_.param("converter_plugin", converter_plugin, converter_plugin);
       
       try
@@ -69,7 +69,7 @@ public:
       
       ROS_INFO_STREAM(converter_plugin << " loaded.");
       
-      costmap_sub_ = n_.subscribe("/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
+      costmap_sub_ = n_.subscribe("/robot_0/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
       polygon_pub_ = n_.advertise<geometry_msgs::PolygonStamped>("/costmap_polygons", 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
       
@@ -83,7 +83,7 @@ public:
       {
         converter_->initialize(n_);
         converter_->setCostmap2D(&map); 
-//         converter_->startWorker(ros::Rate(5), &map, true);
+        converter_->startWorker(ros::Rate(5), &map, true);
       }
    }
    
