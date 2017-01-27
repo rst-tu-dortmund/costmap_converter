@@ -84,16 +84,18 @@ protected:
      polygon.points.front().z = 0;
    }
 
+  cv::Mat offsetImageWithPadding(const cv::Mat& originalImage, int offsetX, int offsetY);
 
 private:
     boost::mutex mutex_;
     costmap_2d::Costmap2D *costmap_;
     cv::Mat costmapMat_;
     ObstacleContainerPtr obstacles_;
-    // Vector von n blobs
     std::string background_subtraction_method_;
     cv::Mat fgMask_;
-    cv::Ptr<cv::BackgroundSubtractor> bgSub_;      //MOG Background subtractor
+    cv::Ptr<cv::BackgroundSubtractor> bgSub_;
+    cv::Mat fgBoundingBox_;
+    std::vector<cv::Rect> boundingBoxes_;
 }; 
 
   
