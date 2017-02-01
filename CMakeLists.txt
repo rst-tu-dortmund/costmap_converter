@@ -131,7 +131,8 @@ add_library(costmap_converter 	src/costmap_to_polygons.cpp
 				src/costmap_to_polygons_concave.cpp
 				src/costmap_to_lines_convex_hull.cpp
 				src/costmap_to_lines_ransac.cpp
-				src/costmap_to_dynamic_obstacles.cpp)
+				src/costmap_to_dynamic_obstacles.cpp
+				src/background_subtractor)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
 
 
@@ -139,7 +140,14 @@ target_link_libraries(costmap_converter ${catkin_LIBRARIES} )
 add_executable(standalone_converter src/costmap_converter_node.cpp)
 target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
   
-     
+# Necessary for the use of openCV visual debug (cvv)
+target_compile_features(costmap_converter PRIVATE cxx_nullptr)
+# (un)set: cmake -DCVV_DEBUG_MODE=OFF ..
+OPTION(CVV_DEBUG_MODE "cvvisual-debug-mode" ON)
+if(CVV_DEBUG_MODE MATCHES ON)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCVVISUAL_DEBUGMODE")
+endif()
+
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(drawing_node drawing_generate_messages_cpp)

@@ -7,6 +7,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/bgsegm.hpp>
 
+#include "background_subtractor.h"
+
 namespace costmap_converter
 {
   
@@ -59,8 +61,8 @@ public:
      */
     ObstacleContainerConstPtr getObstacles();
 
-    // OpenCV Visualization, workaround für freeze
-    virtual void visualize();
+    // OpenCV Visualization
+    void visualize();
 
 protected:
     /**
@@ -93,7 +95,8 @@ private:
     ObstacleContainerPtr obstacles_;
     std::string background_subtraction_method_;
     cv::Mat fgMask_;
-    cv::Ptr<cv::BackgroundSubtractor> bgSub_;
+//    cv::Ptr<cv::BackgroundSubtractor> bgSub_;
+    BackgroundSubtractor* bgSub_;
     cv::Mat fgBoundingBox_;
     std::vector<cv::Rect> boundingBoxes_;
 }; 

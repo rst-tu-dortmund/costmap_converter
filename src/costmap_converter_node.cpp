@@ -83,7 +83,7 @@ public:
       {
         converter_->initialize(n_);
         converter_->setCostmap2D(&map); 
-        converter_->startWorker(ros::Rate(5), &map, true);
+        //converter_->startWorker(ros::Rate(5), &map, true);
       }
    }
    
@@ -181,12 +181,6 @@ public:
     marker_pub.publish(line_list);
   }
   
-  // workaround
-  void visualize()
-  {
-      converter_->visualize();
-  }
-  
 private:
   pluginlib::ClassLoader<costmap_converter::BaseCostmapToPolygons> converter_loader_;
   boost::shared_ptr<costmap_converter::BaseCostmapToPolygons> converter_;
@@ -207,23 +201,13 @@ private:
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "costmap_converter");
-    
   
   CostmapStandaloneConversion convert_process;
   
-  //ros::spin();
-  ros::Rate r(5);
-  while(ros::ok())
-  {
-    convert_process.visualize(); //workaround
-    ros::spinOnce();
-    r.sleep();
-  }
+  ros::spin();
 
   costmap_2d::Costmap2D costmap;
   
-  
-
   return 0;
 }
 
