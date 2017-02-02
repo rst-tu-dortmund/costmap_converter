@@ -5,8 +5,8 @@
 
 BackgroundSubtractor::BackgroundSubtractor()
 {
-  minSepBetweenSlowAndFastFilter = 100;
-  minOccupancyProbability_ = 200;
+  minSepBetweenSlowAndFastFilter_ = 100;
+  minOccupancyProbability_ = 230;
 }
 
 void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow, double alpha_fast)
@@ -28,15 +28,20 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   int shiftRelativeToPreviousPosY_ = shiftY - previousShiftY_;
   previousShiftX_ = shiftX;
   previousShiftY_ = shiftY;
+
   //if(shiftRelativeToPreviousPosX_ != 0 || shiftRelativeToPreviousPosY_ != 0)
   transformToCurrentFrame(shiftRelativeToPreviousPosX_, shiftRelativeToPreviousPosY_);
+
+  cvv::debugFilter(occupancyGrid_fast, currentFrame_);
 
   // compute time mean value for each pixel according to learningrate alpha
   occupancyGrid_fast = alpha_fast * currentFrame_ + (1.0-alpha_fast) * occupancyGrid_fast;
   occupancyGrid_slow = alpha_slow * currentFrame_ + (1.0-alpha_slow) * occupancyGrid_slow;
 
-  // determine moving pixels by thresholding
-  cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter, 255, cv::THRESH_BINARY);
+  // 1) occupancyGrid_fast > minOccupancyProbability
+  cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0/*unused*/, cv::THRESH_TOZERO);
+  // 2) occupancyGrif_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
+  cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255, cv::THRESH_BINARY);
 
   visualize("Current frame", currentFrame_);
   visualize("Foreground mask", fgMask);
@@ -50,8 +55,9 @@ void BackgroundSubtractor::transformToCurrentFrame(int shiftX, int shiftY)
   // in cv::Mat Pixelkoordinaten wird um shift X nach links und um shiftY nach oben geschoben
   cv::Mat temp_fast, temp_slow;
   cv::Mat translationMat = (cv::Mat_<double>(2,3,CV_64F) << 1, 0, -shiftX, 0, 1, -shiftY);
-  cv::warpAffine(occupancyGrid_fast, temp_fast, translationMat, occupancyGrid_fast.size());
-  cv::warpAffine(occupancyGrid_slow, temp_slow, translationMat, occupancyGrid_slow.size());
+  cv::warpAffine(occupancyGrid_fast, temp_fast, translationMat, occupancyGrid_fast.size()); // can't operate in-place
+  cv::warpAffine(occupancyGrid_slow, temp_slow, translationMat, occupancyGrid_slow.size()); // can't operate in-place
+
   occupancyGrid_fast = temp_fast;
   occupancyGrid_slow = temp_slow;
 }

@@ -23,8 +23,8 @@ private:
   int previousShiftX_;
   int previousShiftY_;
 
-  double minOccupancyProbability_; // currently unused
-  double minSepBetweenSlowAndFastFilter;
+  double minOccupancyProbability_;
+  double minSepBetweenSlowAndFastFilter_;
 };
 
 #endif // BACKGROUNDSUBTRACTOR_H
