@@ -13,6 +13,8 @@ public:
 
   void visualize(std::string name, cv::Mat image);
 
+  void WriteMatToYAML(std::string filename, std::vector<cv::Mat> matVec);
+
 private:
   void transformToCurrentFrame(int shiftX, int shiftY);
 
@@ -25,6 +27,11 @@ private:
 
   double minOccupancyProbability_;
   double minSepBetweenSlowAndFastFilter_;
+
+  std::vector<cv::Mat> currentFrames_vec;
+  std::vector<cv::Mat> occupancyGrid_fast_vec;
+  std::vector<cv::Mat> occupancyGrid_slow_vec;
+  std::vector<cv::Mat> fgMask_vec;
 };
 
 #endif // BACKGROUNDSUBTRACTOR_H
