@@ -5,11 +5,11 @@
 
 BackgroundSubtractor::BackgroundSubtractor()
 {
-  minSepBetweenSlowAndFastFilter_ = 100;
-  minOccupancyProbability_ = 230;
+  minSepBetweenSlowAndFastFilter_ = 80;
+  minOccupancyProbability_ = 180;
 }
 
-void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow, double alpha_fast)
+void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow, double alpha_fast, double beta)
 {
   currentFrame_= image;
 
@@ -47,9 +47,17 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
 
   //cvv::debugFilter(occupancyGrid_fast, currentFrame_, CVVISUAL_LOCATION);
 
+  // Calculate normalized sum (mean) of nearest neighbors
+  cv::Mat nearestNeighborMean_fast(occupancyGrid_fast.size(), CV_8UC1);
+  cv::Mat nearestNeighborMean_slow(occupancyGrid_slow.size(), CV_8UC1);
+//  cv::boxFilter(occupancyGrid_fast, nearestNeighborMean_fast, -1, cv::Size(3,3),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
+//  cv::boxFilter(occupancyGrid_slow, nearestNeighborMean_slow, -1, cv::Size(3,3),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
+  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(3,3), 1, 1, cv::BORDER_REPLICATE);
+  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(3,3), 1, 1, cv::BORDER_REPLICATE);
+
   // compute time mean value for each pixel according to learningrate alpha
-  occupancyGrid_fast = alpha_fast * currentFrame_ + (1.0-alpha_fast) * occupancyGrid_fast;
-  occupancyGrid_slow = alpha_slow * currentFrame_ + (1.0-alpha_slow) * occupancyGrid_slow;
+  occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) + (1-beta)*nearestNeighborMean_fast;
+  occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) + (1-beta)*nearestNeighborMean_slow;
 
   // 1) occupancyGrid_fast > minOccupancyProbability
   cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0/*unused*/, cv::THRESH_TOZERO);
@@ -76,7 +84,7 @@ void BackgroundSubtractor::transformToCurrentFrame(int shiftX, int shiftY)
   cv::warpAffine(occupancyGrid_fast, temp_fast, translationMat, occupancyGrid_fast.size()); // can't operate in-place
   cv::warpAffine(occupancyGrid_slow, temp_slow, translationMat, occupancyGrid_slow.size()); // can't operate in-place
 
-  cvv::debugFilter(occupancyGrid_fast, temp_fast);
+  //cvv::debugFilter(occupancyGrid_fast, temp_fast);
 
   occupancyGrid_fast = temp_fast;
   occupancyGrid_slow = temp_slow;
