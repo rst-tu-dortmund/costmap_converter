@@ -5,7 +5,7 @@
 #include <costmap_converter/costmap_converter_interface.h>
 
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/bgsegm.hpp>
+#include <opencv2/features2d.hpp>
 
 #include "background_subtractor.h"
 
@@ -62,7 +62,7 @@ public:
     ObstacleContainerConstPtr getObstacles();
 
     // OpenCV Visualization
-    void visualize();
+    void visualize(std::string name, cv::Mat image);
 
 protected:
     /**
@@ -93,12 +93,10 @@ private:
     costmap_2d::Costmap2D *costmap_;
     cv::Mat costmapMat_;
     ObstacleContainerPtr obstacles_;
-    std::string background_subtraction_method_;
     cv::Mat fgMask_;
-//    cv::Ptr<cv::BackgroundSubtractor> bgSub_;
     BackgroundSubtractor* bgSub_;
-    cv::Mat fgBoundingBox_;
-    std::vector<cv::Rect> boundingBoxes_;
+    cv::Ptr<cv::SimpleBlobDetector> blobDet_;
+    std::vector<cv::KeyPoint> keypoints_;
 }; 
 
   

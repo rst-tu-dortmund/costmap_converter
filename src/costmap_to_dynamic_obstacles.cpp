@@ -11,8 +11,35 @@ namespace  costmap_converter
 {
     CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
     {
-        bgSub_ = new BackgroundSubtractor();
         costmap_ = NULL;
+        bgSub_ = new BackgroundSubtractor();
+
+        // Setup Blob detector
+        // TODO: Make Parameters accessible from rqt tool
+        cv::SimpleBlobDetector::Params blobDetParams;
+        blobDetParams.minThreshold = 10;
+        blobDetParams.maxThreshold = 200;
+
+        blobDetParams.filterByColor = true; // actually filterByIntensity
+        blobDetParams.blobColor = 255; // Extract light blobs
+
+        blobDetParams.filterByArea = true;
+        blobDetParams.minArea = 5; // Filter out blobs with less pixels
+        blobDetParams.maxArea = 300;
+
+        blobDetParams.filterByCircularity = true; // circularity = 4*pi*area/perimeter^2
+        blobDetParams.minCircularity = 0.2;
+        blobDetParams.maxCircularity = 1; // maximal 1 (in case of a circle)
+
+        blobDetParams.filterByInertia = true;  // Filter blobs based on their elongation
+        blobDetParams.minInertiaRatio = 0.2; // minimal 0 (in case of a line)
+        blobDetParams.maxInertiaRatio = 1; // maximal 1 (in case of a circle)
+
+        blobDetParams.filterByConvexity = false; // Area of the Blob / Area of its convex hull
+        blobDetParams.minConvexity = 0; // minimal 0
+        blobDetParams.maxConvexity = 1; // maximal 1
+
+        blobDet_ = cv::SimpleBlobDetector::create(blobDetParams);
     }
 
     CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
@@ -22,16 +49,6 @@ namespace  costmap_converter
 
     void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
     {
-//        background_subtraction_method_ = "MOG";
-//        nh.param("background_subtraction_method", background_subtraction_method_, background_subtraction_method_);
-
-//        if(background_subtraction_method_.compare("MOG"))
-//          bgSub_ = cv::bgsegm::createBackgroundSubtractorMOG();
-//        else if (background_subtraction_method_.compare("MOG2"))
-//          bgSub_ = cv::createBackgroundSubtractorMOG2();
-//        else
-//          ROS_ERROR("Unknown background subtraction method. Try \"MOG\" or \"MOG2\".");
-
         costmap_ = NULL;
 
         // Parameter setzen..
@@ -48,35 +65,30 @@ namespace  costmap_converter
         ROS_INFO("Origin x [px]: %d \t Origin_y [px]: %d", originX, originY);
 
         // *** BackgroundSubtraction ***
-//        bgSub_->apply(costmapMat_, fgMask_);
         bgSub_->apply(costmapMat_, fgMask_, originX, originY);
 
-//        visualize();
 
-//        if(!fgMask_.empty())
-//        {
-//          // *** Blob detection ***
-//          // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
-//          cv::Mat fgMask = fgMask_.clone();
+        // *** Blob detection ***
+        if(!fgMask_.empty())
+        {
+          // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
+          cv::Mat fgMask = fgMask_.clone();
 
-//          // Closing Operation
-//          int morph_size = 2;
-//          cv::Mat element = cv::getStructuringElement( cv::MORPH_ELLIPSE,
-//                                                       cv::Size(2*morph_size+1, 2*morph_size+1),
-//                                                       cv::Point(morph_size, morph_size));
-//          cv::dilate( fgMask, fgMask, element ); // Eingangsbild = Ausgangsbild
-//          cv::erode( fgMask, fgMask, element ); // Eingangsbild = Ausgangsbild
+          // Closing Operation
+          int morph_size = 1;
+          cv::Mat element = cv::getStructuringElement( cv::MORPH_ELLIPSE,
+                                                       cv::Size(2*morph_size+1, 2*morph_size+1),
+                                                       cv::Point(morph_size, morph_size));
+          cv::dilate( fgMask, fgMask, element ); // Eingangsbild = Ausgangsbild
+          cv::dilate( fgMask, fgMask, element ); // Eingangsbild = Ausgangsbild
+          cv::erode( fgMask, fgMask, element );  // Eingangsbild = Ausgangsbild
 
-//          // Find Bounding Boxes
-//          std::vector<std::vector<cv::Point> > contours;
-//          cv::findContours(fgMask, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-//          boundingBoxes_.resize(contours.size());
+          blobDet_->detect(fgMask, keypoints_);
 
-//          for(int i = 0; i < contours.size(); i++)
-//          {
-//            boundingBoxes_[i] = cv::boundingRect(cv::Mat(contours[i]));
-//          }
-//        }
+          cv::Mat fgMaskWithKeypoints = cv::Mat(fgMask.size(), CV_8UC3);
+          cv::drawKeypoints(fgMask, keypoints_, fgMaskWithKeypoints, cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+        }
 
         // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
         // Geschwindigkeit berechnen, Kalman filter
@@ -121,29 +133,14 @@ namespace  costmap_converter
         obstacles_ = obstacles;
     }
 
-    void CostmapToDynamicObstacles::visualize()
+    void CostmapToDynamicObstacles::visualize(std::string name, cv::Mat image)
     {
-        //bgSub_->visualize();
-        // costmap_ and costmapMat_ share the same data
-        if(!costmap_->getMutex())
-          return;
-        costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
-
-        if(!costmapMat_.empty())
-        {
-          // Flip Mat to match rviz
-          cv::Mat costmap;
-          cv::flip(costmapMat_, costmap,0);
-          cv::imshow("Costmap matrix", costmap);
-        }
-
-        if(!fgMask_.empty())
-        {
-          cv::Mat flippedMask;
-          cv::flip(fgMask_, flippedMask,0);
-          cv::imshow("Foreground mask", flippedMask);
-        }
-
+      if(!image.empty())
+      {
+        cv::Mat im = image.clone();
+        cv::flip(im, im, 0);
+        cv::imshow(name, im);
         cv::waitKey(1);
+      }
     }
 }

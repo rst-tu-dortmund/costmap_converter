@@ -64,8 +64,8 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   // 2) occupancyGrif_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
   cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255, cv::THRESH_BINARY);
 
-  visualize("Current frame", currentFrame_);
-  visualize("Foreground mask", fgMask);
+//  visualize("Current frame", currentFrame_);
+//  visualize("Foreground mask", fgMask);
 
   currentFrames_vec.push_back(currentFrame_);
   occupancyGrid_fast_vec.push_back(occupancyGrid_fast);
