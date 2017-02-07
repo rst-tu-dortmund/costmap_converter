@@ -8,6 +8,7 @@
 #include <opencv2/features2d.hpp>
 
 #include "background_subtractor.h"
+#include "blob_detector.h"
 
 namespace costmap_converter
 {
@@ -86,8 +87,6 @@ protected:
      polygon.points.front().z = 0;
    }
 
-  cv::Mat offsetImageWithPadding(const cv::Mat& originalImage, int offsetX, int offsetY);
-
 private:
     boost::mutex mutex_;
     costmap_2d::Costmap2D *costmap_;
@@ -95,7 +94,7 @@ private:
     ObstacleContainerPtr obstacles_;
     cv::Mat fgMask_;
     BackgroundSubtractor* bgSub_;
-    cv::Ptr<cv::SimpleBlobDetector> blobDet_;
+    cv::Ptr<BlobDetector> blobDet_;
     std::vector<cv::KeyPoint> keypoints_;
 }; 
 

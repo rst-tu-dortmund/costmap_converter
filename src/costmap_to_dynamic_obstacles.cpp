@@ -16,7 +16,7 @@ namespace  costmap_converter
 
         // Setup Blob detector
         // TODO: Make Parameters accessible from rqt tool
-        cv::SimpleBlobDetector::Params blobDetParams;
+        BlobDetector::Params blobDetParams;
         blobDetParams.minThreshold = 10;
         blobDetParams.maxThreshold = 200;
 
@@ -39,7 +39,7 @@ namespace  costmap_converter
         blobDetParams.minConvexity = 0; // minimal 0
         blobDetParams.maxConvexity = 1; // maximal 1
 
-        blobDet_ = cv::SimpleBlobDetector::create(blobDetParams);
+        blobDet_ = BlobDetector::create(blobDetParams);
     }
 
     CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
