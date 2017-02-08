@@ -48,21 +48,32 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   //cvv::debugFilter(occupancyGrid_fast, currentFrame_, CVVISUAL_LOCATION);
 
   // Calculate normalized sum (mean) of nearest neighbors
+  int size = 3; // 3, 5, 7, ....
   cv::Mat nearestNeighborMean_fast(occupancyGrid_fast.size(), CV_8UC1);
   cv::Mat nearestNeighborMean_slow(occupancyGrid_slow.size(), CV_8UC1);
-//  cv::boxFilter(occupancyGrid_fast, nearestNeighborMean_fast, -1, cv::Size(3,3),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
-//  cv::boxFilter(occupancyGrid_slow, nearestNeighborMean_slow, -1, cv::Size(3,3),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
-  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(3,3), 1, 1, cv::BORDER_REPLICATE);
-  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(3,3), 1, 1, cv::BORDER_REPLICATE);
+  cv::boxFilter(occupancyGrid_fast, nearestNeighborMean_fast, -1, cv::Size(size,size),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
+  cv::boxFilter(occupancyGrid_slow, nearestNeighborMean_slow, -1, cv::Size(size,size),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
+//  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
+//  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
 
   // compute time mean value for each pixel according to learningrate alpha
-  occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) + (1-beta)*nearestNeighborMean_fast;
-  occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) + (1-beta)*nearestNeighborMean_slow;
+  //occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) + (1-beta)*nearestNeighborMean_fast;
+  cv::addWeighted(currentFrame_, alpha_fast, occupancyGrid_fast, (1-alpha_fast), 0, occupancyGrid_fast);
+  cv::addWeighted(occupancyGrid_fast, beta, nearestNeighborMean_fast, (1-beta), 0, occupancyGrid_fast);
+  //occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) + (1-beta)*nearestNeighborMean_slow;
+  cv::addWeighted(currentFrame_, alpha_slow, occupancyGrid_slow, (1-alpha_slow), 0, occupancyGrid_slow);
+  cv::addWeighted(occupancyGrid_slow, beta, nearestNeighborMean_slow, (1-beta), 0, occupancyGrid_slow);
 
-  // 1) occupancyGrid_fast > minOccupancyProbability
+  // 1) Obstacles should be detected after a minimum response of the fast filter
+  //    occupancyGrid_fast > minOccupancyProbability
   cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0/*unused*/, cv::THRESH_TOZERO);
-  // 2) occupancyGrif_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
+  // 2) Moving obstacles have a minimum difference between the responses of the slow and fast filter
+  //    occupancyGrid_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
   cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255, cv::THRESH_BINARY);
+  // 3) Dismiss static obstacles
+  //    nearestNeighbors_slow < maxOccupancyNeighbors
+  cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, 0, 255, cv::THRESH_BINARY_INV);
+  cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
 //  visualize("Current frame", currentFrame_);
 //  visualize("Foreground mask", fgMask);
