@@ -6,6 +6,7 @@
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/features2d.hpp>
+#include <opencv2/video/tracking.hpp>
 
 #include "background_subtractor.h"
 #include "blob_detector.h"
@@ -96,6 +97,7 @@ private:
     BackgroundSubtractor* bgSub_;
     cv::Ptr<BlobDetector> blobDet_;
     std::vector<cv::KeyPoint> keypoints_;
+    cv::KalmanFilter kf_;
 }; 
 
   
