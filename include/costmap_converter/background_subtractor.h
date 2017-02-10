@@ -27,6 +27,7 @@ private:
 
   double minOccupancyProbability_;
   double minSepBetweenSlowAndFastFilter_;
+  double maxOccupancyNeighbors_;
 
   std::vector<cv::Mat> currentFrames_vec;
   std::vector<cv::Mat> occupancyGrid_fast_vec;

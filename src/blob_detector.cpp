@@ -105,7 +105,7 @@ void BlobDetector::findBlobs(const cv::Mat &image, const cv::Mat &binaryImage,
 
     std::vector < std::vector<cv::Point> >contours;
     cv::Mat tmpBinaryImage = binaryImage.clone();
-    cv::findContours(tmpBinaryImage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE);
+    cv::findContours(tmpBinaryImage, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
 
     for (size_t contourIdx = 0; contourIdx < contours.size(); contourIdx++)

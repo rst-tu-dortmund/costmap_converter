@@ -7,6 +7,7 @@ BackgroundSubtractor::BackgroundSubtractor()
 {
   minSepBetweenSlowAndFastFilter_ = 80;
   minOccupancyProbability_ = 180;
+  maxOccupancyNeighbors_ = 80;
 }
 
 void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow, double alpha_fast, double beta)
@@ -72,10 +73,10 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255, cv::THRESH_BINARY);
   // 3) Dismiss static obstacles
   //    nearestNeighbors_slow < maxOccupancyNeighbors
-  cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, 0, 255, cv::THRESH_BINARY_INV);
+  cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, maxOccupancyNeighbors_, 255, cv::THRESH_BINARY_INV);
   cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
-//  visualize("Current frame", currentFrame_);
+  visualize("Current frame", currentFrame_);
 //  visualize("Foreground mask", fgMask);
 
   currentFrames_vec.push_back(currentFrame_);
