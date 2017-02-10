@@ -10,6 +10,7 @@
 
 #include "background_subtractor.h"
 #include "blob_detector.h"
+#include "Ctracker.h"
 
 namespace costmap_converter
 {
@@ -97,7 +98,8 @@ private:
     BackgroundSubtractor* bgSub_;
     cv::Ptr<BlobDetector> blobDet_;
     std::vector<cv::KeyPoint> keypoints_;
-    cv::KalmanFilter kf_;
+    //cv::KalmanFilter kf_;
+    CTracker* tracker_;
 }; 
 
   

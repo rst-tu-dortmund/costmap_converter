@@ -41,28 +41,34 @@ namespace  costmap_converter
 
         blobDet_ = BlobDetector::create(blobDetParams);
 
+//        float dt = 0.6;
+//        int dimStateVector = 6; // state vector: [x y z xdot, ydot, zdot] -> dim 6
+//        int dimMeasurementVector = 3; // measurement vector: [x y z] -> dim 3
+//        kf_ = cv::KalmanFilter(dimStateVector, dimMeasurementVector);
+//        kf_.transitionMatrix = (cv::Mat_<float>(kf_.transitionMatrix.size()) << 1, 0, 0, dt,  0,  0,
+//                                                                                0, 1, 0,  0, dt,  0,
+//                                                                                0, 0, 1,  0,  0, dt,
+//                                                                                0, 0, 0,  1,  0,  0,
+//                                                                                0, 0, 0,  0,  1,  0,
+//                                                                                0, 0, 0,  0,  0,  1);
+//        kf_.measurementMatrix = (cv::Mat_<float>(3,6) << 1, 0, 0, 0, 0, 0,
+//                                                         0, 1, 0, 0, 0, 0,
+//                                                         0, 0, 1, 0, 0, 0);
+//        cv::setIdentity(kf_.processNoiseCov, cv::Scalar::all(1e-4));
+//        cv::setIdentity(kf_.measurementNoiseCov, cv::Scalar::all(1e-9));
+//        cv::setIdentity(kf_.errorCovPost, cv::Scalar::all(1000000));
         float dt = 0.6;
-        int dimStateVector = 6; // state vector: [x y z xdot, ydot, zdot] -> dim 6
-        int dimMeasurementVector = 3; // measurement vector: [x y z] -> dim 3
-        kf_ = cv::KalmanFilter(dimStateVector, dimMeasurementVector);
-        kf_.transitionMatrix = (cv::Mat_<float>(kf_.transitionMatrix.size()) << 1, 0, 0, dt,  0,  0,
-                                                                                0, 1, 0,  0, dt,  0,
-                                                                                0, 0, 1,  0,  0, dt,
-                                                                                0, 0, 0,  1,  0,  0,
-                                                                                0, 0, 0,  0,  1,  0,
-                                                                                0, 0, 0,  0,  0,  1);
-        kf_.measurementMatrix = (cv::Mat_<float>(3,6) << 1, 0, 0, 0, 0, 0,
-                                                         0, 1, 0, 0, 0, 0,
-                                                         0, 0, 1, 0, 0, 0);
-        cv::setIdentity(kf_.processNoiseCov, cv::Scalar::all(1e-4));
-        cv::setIdentity(kf_.measurementNoiseCov, cv::Scalar::all(1e-9));
-        cv::setIdentity(kf_.errorCovPost, cv::Scalar::all(1000000));
-
+        float accel_noise_mag = 0.0;
+        float dist_thresh = 60.0;
+        size_t max_allowed_skipped_frames = 1;
+        size_t max_trace_length = 10;
+        tracker_ = new CTracker(dt, accel_noise_mag, dist_thresh, max_allowed_skipped_frames, max_trace_length);
     }
 
     CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
     {
         delete bgSub_;
+        delete tracker_;
     }
 
     void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
@@ -101,39 +107,60 @@ namespace  costmap_converter
           cv::erode( fgMask, fgMask, element );  // Eingangsbild = Ausgangsbild
 
           blobDet_->detect(fgMask, keypoints_);
-          blobDet_->getContours();
+          std::vector < std::vector<cv::Point> > contour = blobDet_->getContours();
 
-          cv::Mat fgMaskWithKeypoints = cv::Mat(fgMask.size(), CV_8UC3);
-          cv::drawKeypoints(fgMask, keypoints_, fgMaskWithKeypoints, cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-         // visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+          cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
+          cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
+//          cv::drawKeypoints(fgMask, keypoints_, fgMaskWithKeypoints, cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+//          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+
+//        // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
+          std::vector<Point_t> detectedCenters(keypoints_.size());
+          cv::KeyPoint::convert(keypoints_, detectedCenters);
+
+          std::vector<cv::Rect> detectedBoundingBoxes(contour.size());
+          for (int i=0; i<contour.size(); i++)
+            detectedBoundingBoxes.at(i) = cv::boundingRect(contour.at(i));
+
+          tracker_->Update(detectedCenters, detectedBoundingBoxes, CTracker::CentersDist);
 
 
-        // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
-          if(keypoints_.empty())
-            return;
-
-          if(kf_.statePre.at<float>(0)==0)
+          for (auto p : detectedCenters)
           {
-            kf_.statePre.at<float>(0) = keypoints_.at(0).pt.x;
-            kf_.statePre.at<float>(1) = keypoints_.at(0).pt.y;
+            cv::circle(fgMaskWithKeypoints, p, 3, cv::Scalar(0, 255, 0), 1);
           }
 
-        // Geschwindigkeit berechnen, Kalman filter
-          cv::Mat prediction = kf_.predict();
-          cv::Point predictedPoint(prediction.at<float>(0), prediction.at<float>(1));
-
-          cv::Mat_<float> measurement(3,1);
-          measurement(0) = keypoints_.at(0).pt.x;
-          measurement(1) = keypoints_.at(0).pt.y;
-          measurement(2) = 0;
-          cv::Mat estimated = kf_.correct(measurement);
-          cv::Point statePt(estimated.at<float>(0), estimated.at<float>(1));
-
-          ROS_INFO("Vel_x: %f, Vely: %f", estimated.at<float>(4), estimated.at<float>(5));
-          cv::circle(fgMaskWithKeypoints, predictedPoint, 3, cv::Scalar(0,255,0));
-          cv::circle(fgMaskWithKeypoints, statePt, 4, cv::Scalar(255,0,0));
+          for (int i = 0; i < tracker_->tracks.size(); i++)
+          {
+            cv::rectangle(fgMaskWithKeypoints, tracker_->tracks[i]->GetLastRect(), cv::Scalar(0, 0, 255), 1);
+          }
 
           visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+//          if(keypoints_.empty())
+//            return;
+
+//          if(kf_.statePre.at<float>(0)==0)
+//          {
+//            kf_.statePre.at<float>(0) = keypoints_.at(0).pt.x;
+//            kf_.statePre.at<float>(1) = keypoints_.at(0).pt.y;
+//          }
+
+//        // Geschwindigkeit berechnen, Kalman filter
+//          cv::Mat prediction = kf_.predict();
+//          cv::Point predictedPoint(prediction.at<float>(0), prediction.at<float>(1));
+
+//          cv::Mat_<float> measurement(3,1);
+//          measurement(0) = keypoints_.at(0).pt.x;
+//          measurement(1) = keypoints_.at(0).pt.y;
+//          measurement(2) = 0;
+//          cv::Mat estimated = kf_.correct(measurement);
+//          cv::Point statePt(estimated.at<float>(0), estimated.at<float>(1));
+
+//          ROS_INFO("Vel_x: %f, Vely: %f", estimated.at<float>(4), estimated.at<float>(5));
+//          cv::circle(fgMaskWithKeypoints, predictedPoint, 3, cv::Scalar(0,255,0));
+//          cv::circle(fgMaskWithKeypoints, statePt, 4, cv::Scalar(255,0,0));
+
+//          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
 
 
         }
