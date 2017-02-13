@@ -8,27 +8,27 @@
 class BlobDetector : public cv::SimpleBlobDetector
 {
 public:
+  BlobDetector(const cv::SimpleBlobDetector::Params& parameters = cv::SimpleBlobDetector::Params());
 
-    BlobDetector(const cv::SimpleBlobDetector::Params &parameters = cv::SimpleBlobDetector::Params());
+  static cv::Ptr<BlobDetector> create(const BlobDetector::Params& params);
 
-    static cv::Ptr<BlobDetector> create(const BlobDetector::Params& params);
+  const std::vector<std::vector<cv::Point>> getContours();
 
-    const std::vector < std::vector<cv::Point> > getContours();
-
-    virtual void detect( const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints, const cv::Mat& mask=cv::Mat()) const;
+  virtual void detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,
+                      const cv::Mat& mask = cv::Mat()) const;
 
 protected:
-    struct Center
-     {
-         cv::Point2d location;
-         double radius;
-         double confidence;
-     };
+  struct Center
+  {
+    cv::Point2d location;
+    double radius;
+    double confidence;
+  };
 
-    virtual void findBlobs(const cv::Mat &image, const cv::Mat &binaryImage,
-                           std::vector<Center> &centers, std::vector < std::vector<cv::Point> >&contours) const;
+  virtual void findBlobs(const cv::Mat& image, const cv::Mat& binaryImage, std::vector<Center>& centers,
+                         std::vector<std::vector<cv::Point>>& contours) const;
 
-    Params params;
+  Params params;
 };
 
 #endif // BLOBDETECTOR_H

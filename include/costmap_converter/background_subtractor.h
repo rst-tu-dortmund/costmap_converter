@@ -3,13 +3,13 @@
 
 #include <cv_bridge/cv_bridge.h>
 
-
 class BackgroundSubtractor
 {
 public:
   BackgroundSubtractor();
 
-  void apply(cv::Mat image, cv::Mat &fgMask, int shiftX = 0, int shiftY = 0, double alpha_slow = 0.55, double alpha_fast = 0.95, double beta = 0.8);
+  void apply(cv::Mat image, cv::Mat& fgMask, int shiftX = 0, int shiftY = 0, double alpha_slow = 0.55,
+             double alpha_fast = 0.95, double beta = 0.8);
 
   void visualize(std::string name, cv::Mat image);
 

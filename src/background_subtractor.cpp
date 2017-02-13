@@ -2,7 +2,6 @@
 #include <opencv2/cvv.hpp>
 #include "costmap_converter/background_subtractor.h"
 
-
 BackgroundSubtractor::BackgroundSubtractor()
 {
   minSepBetweenSlowAndFastFilter_ = 80;
@@ -10,12 +9,13 @@ BackgroundSubtractor::BackgroundSubtractor()
   maxOccupancyNeighbors_ = 80;
 }
 
-void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow, double alpha_fast, double beta)
+void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow,
+                                 double alpha_fast, double beta)
 {
-  currentFrame_= image;
+  currentFrame_ = image;
 
   // occupancyGrids are empty only once in the beginning -> initialize variables
-  if(occupancyGrid_fast.empty() && occupancyGrid_slow.empty())
+  if (occupancyGrid_fast.empty() && occupancyGrid_slow.empty())
   {
     occupancyGrid_fast = currentFrame_;
     occupancyGrid_slow = currentFrame_;
@@ -29,7 +29,7 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
     return;
   }
 
-  if(currentFrames_vec.size() == 10)
+  if (currentFrames_vec.size() == 10)
   {
     WriteMatToYAML("currentFrames", currentFrames_vec);
     WriteMatToYAML("OccupancyGrid_fast", occupancyGrid_fast_vec);
@@ -43,41 +43,46 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   previousShiftX_ = shiftX;
   previousShiftY_ = shiftY;
 
-  //if(shiftRelativeToPreviousPosX_ != 0 || shiftRelativeToPreviousPosY_ != 0)
+  // if(shiftRelativeToPreviousPosX_ != 0 || shiftRelativeToPreviousPosY_ != 0)
   transformToCurrentFrame(shiftRelativeToPreviousPosX_, shiftRelativeToPreviousPosY_);
 
-  //cvv::debugFilter(occupancyGrid_fast, currentFrame_, CVVISUAL_LOCATION);
+  // cvv::debugFilter(occupancyGrid_fast, currentFrame_, CVVISUAL_LOCATION);
 
   // Calculate normalized sum (mean) of nearest neighbors
   int size = 3; // 3, 5, 7, ....
   cv::Mat nearestNeighborMean_fast(occupancyGrid_fast.size(), CV_8UC1);
   cv::Mat nearestNeighborMean_slow(occupancyGrid_slow.size(), CV_8UC1);
-  cv::boxFilter(occupancyGrid_fast, nearestNeighborMean_fast, -1, cv::Size(size,size),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
-  cv::boxFilter(occupancyGrid_slow, nearestNeighborMean_slow, -1, cv::Size(size,size),cv::Point(-1,-1), true, cv::BORDER_REPLICATE);
-//  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
-//  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
+  cv::boxFilter(occupancyGrid_fast, nearestNeighborMean_fast, -1, cv::Size(size, size), cv::Point(-1, -1), true,
+                cv::BORDER_REPLICATE);
+  cv::boxFilter(occupancyGrid_slow, nearestNeighborMean_slow, -1, cv::Size(size, size), cv::Point(-1, -1), true,
+                cv::BORDER_REPLICATE);
+  //  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
+  //  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
 
   // compute time mean value for each pixel according to learningrate alpha
-  //occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) + (1-beta)*nearestNeighborMean_fast;
-  cv::addWeighted(currentFrame_, alpha_fast, occupancyGrid_fast, (1-alpha_fast), 0, occupancyGrid_fast);
-  cv::addWeighted(occupancyGrid_fast, beta, nearestNeighborMean_fast, (1-beta), 0, occupancyGrid_fast);
-  //occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) + (1-beta)*nearestNeighborMean_slow;
-  cv::addWeighted(currentFrame_, alpha_slow, occupancyGrid_slow, (1-alpha_slow), 0, occupancyGrid_slow);
-  cv::addWeighted(occupancyGrid_slow, beta, nearestNeighborMean_slow, (1-beta), 0, occupancyGrid_slow);
+  // occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) +
+  // (1-beta)*nearestNeighborMean_fast;
+  cv::addWeighted(currentFrame_, alpha_fast, occupancyGrid_fast, (1 - alpha_fast), 0, occupancyGrid_fast);
+  cv::addWeighted(occupancyGrid_fast, beta, nearestNeighborMean_fast, (1 - beta), 0, occupancyGrid_fast);
+  // occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) +
+  // (1-beta)*nearestNeighborMean_slow;
+  cv::addWeighted(currentFrame_, alpha_slow, occupancyGrid_slow, (1 - alpha_slow), 0, occupancyGrid_slow);
+  cv::addWeighted(occupancyGrid_slow, beta, nearestNeighborMean_slow, (1 - beta), 0, occupancyGrid_slow);
 
   // 1) Obstacles should be detected after a minimum response of the fast filter
   //    occupancyGrid_fast > minOccupancyProbability
-  cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0/*unused*/, cv::THRESH_TOZERO);
+  cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0 /*unused*/, cv::THRESH_TOZERO);
   // 2) Moving obstacles have a minimum difference between the responses of the slow and fast filter
   //    occupancyGrid_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
-  cv::threshold(occupancyGrid_fast-occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255, cv::THRESH_BINARY);
+  cv::threshold(occupancyGrid_fast - occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255,
+                cv::THRESH_BINARY);
   // 3) Dismiss static obstacles
   //    nearestNeighbors_slow < maxOccupancyNeighbors
   cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, maxOccupancyNeighbors_, 255, cv::THRESH_BINARY_INV);
   cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
   visualize("Current frame", currentFrame_);
-//  visualize("Foreground mask", fgMask);
+  //  visualize("Foreground mask", fgMask);
 
   currentFrames_vec.push_back(currentFrame_);
   occupancyGrid_fast_vec.push_back(occupancyGrid_fast);
@@ -92,20 +97,19 @@ void BackgroundSubtractor::transformToCurrentFrame(int shiftX, int shiftY)
   // Verschieben um shiftX nach links und shiftY nach unten (in costmap-Koordinaten!)
   // in cv::Mat Pixelkoordinaten wird um shift X nach links und um shiftY nach oben geschoben
   cv::Mat temp_fast, temp_slow;
-  cv::Mat translationMat = (cv::Mat_<double>(2,3,CV_64F) << 1, 0, -shiftX, 0, 1, -shiftY);
+  cv::Mat translationMat = (cv::Mat_<double>(2, 3, CV_64F) << 1, 0, -shiftX, 0, 1, -shiftY);
   cv::warpAffine(occupancyGrid_fast, temp_fast, translationMat, occupancyGrid_fast.size()); // can't operate in-place
   cv::warpAffine(occupancyGrid_slow, temp_slow, translationMat, occupancyGrid_slow.size()); // can't operate in-place
 
-  //cvv::debugFilter(occupancyGrid_fast, temp_fast);
+  // cvv::debugFilter(occupancyGrid_fast, temp_fast);
 
   occupancyGrid_fast = temp_fast;
   occupancyGrid_slow = temp_slow;
 }
 
-
 void BackgroundSubtractor::visualize(std::string name, cv::Mat image)
 {
-  if(!image.empty())
+  if (!image.empty())
   {
     cv::Mat im = image.clone();
     cv::flip(im, im, 0);
@@ -116,7 +120,7 @@ void BackgroundSubtractor::visualize(std::string name, cv::Mat image)
 
 void BackgroundSubtractor::WriteMatToYAML(std::string filename, std::vector<cv::Mat> matVec)
 {
-  cv::FileStorage fs("./MasterThesis/Matlab/"+filename+".yml", cv::FileStorage::WRITE);
+  cv::FileStorage fs("./MasterThesis/Matlab/" + filename + ".yml", cv::FileStorage::WRITE);
   fs << "frames" << matVec;
   fs.release();
 }
