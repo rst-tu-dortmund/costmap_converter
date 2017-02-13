@@ -26,14 +26,15 @@ public:
 	track_t CalcDist(const Point_t& p)
 	{
 		Point_t diff = prediction - p;
-    return std::sqrt(diff.x * diff.x + diff.y * diff.y);
+    return std::sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
 	}
 
+  // TODO: Add z-Dimension
 	track_t CalcDist(const cv::Rect& r)
 	{
 		cv::Rect rect = GetLastRect();
 
-		std::array<track_t, 4> diff;
+    std::array<track_t, 6> diff;
 		diff[0] = prediction.x - lastRect.width / 2 - r.x;
 		diff[1] = prediction.y - lastRect.height / 2 - r.y;
 		diff[2] = static_cast<track_t>(lastRect.width - r.width);
@@ -109,9 +110,9 @@ private:
   // distance threshold. Pairs of points with higher distance are not considered in the assignment problem
 	track_t dist_thres;
   // Maximum number of frames the track is maintained without seeing the object in the measurement data
-    size_t maximum_allowed_skipped_frames;
+  size_t maximum_allowed_skipped_frames;
   // Maximum trace length
-    size_t max_trace_length;
+  size_t max_trace_length;
 
 	size_t NextTrackID;
 };

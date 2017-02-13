@@ -41,22 +41,6 @@ namespace  costmap_converter
 
         blobDet_ = BlobDetector::create(blobDetParams);
 
-//        float dt = 0.6;
-//        int dimStateVector = 6; // state vector: [x y z xdot, ydot, zdot] -> dim 6
-//        int dimMeasurementVector = 3; // measurement vector: [x y z] -> dim 3
-//        kf_ = cv::KalmanFilter(dimStateVector, dimMeasurementVector);
-//        kf_.transitionMatrix = (cv::Mat_<float>(kf_.transitionMatrix.size()) << 1, 0, 0, dt,  0,  0,
-//                                                                                0, 1, 0,  0, dt,  0,
-//                                                                                0, 0, 1,  0,  0, dt,
-//                                                                                0, 0, 0,  1,  0,  0,
-//                                                                                0, 0, 0,  0,  1,  0,
-//                                                                                0, 0, 0,  0,  0,  1);
-//        kf_.measurementMatrix = (cv::Mat_<float>(3,6) << 1, 0, 0, 0, 0, 0,
-//                                                         0, 1, 0, 0, 0, 0,
-//                                                         0, 0, 1, 0, 0, 0);
-//        cv::setIdentity(kf_.processNoiseCov, cv::Scalar::all(1e-4));
-//        cv::setIdentity(kf_.measurementNoiseCov, cv::Scalar::all(1e-9));
-//        cv::setIdentity(kf_.errorCovPost, cv::Scalar::all(1000000));
         float dt = 0.6;
         float accel_noise_mag = 0.0;
         float dist_thresh = 60.0;
@@ -84,6 +68,7 @@ namespace  costmap_converter
           return;
 
         /////////////////////////// Foreground detection /////////////////////////////////
+        // Dynamic obstacles are separated from static obstacles
         int originX = round(costmap_->getOriginX() / costmap_->getResolution());
         int originY = round(costmap_->getOriginY() / costmap_->getResolution());
 //        ROS_INFO("Origin x  [m]: %f    Origin_y  [m]: %f", costmap_->getOriginX(), costmap_->getOriginY());
@@ -91,7 +76,8 @@ namespace  costmap_converter
 
         bgSub_->apply(costmapMat_, fgMask_, originX, originY);
 
-        /////////////////////////////// Blob detection ///////////////////////////////////
+        /////////////////////////////// Blob detection //////////////////////////////////
+        // Centers and contours of Blobs are detected
         if(!fgMask_.empty())
         {
           // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
@@ -114,20 +100,29 @@ namespace  costmap_converter
 //          cv::drawKeypoints(fgMask, keypoints_, fgMaskWithKeypoints, cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 //          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
 
-//        // Verknüpfung mit Hindernissen aus letztem Bild -> IDs verteilen
+          ////////////////////////////// Tracking /////////////////////////////////////////
+          // Objects are assigned to objects from previous frame based on Hungarian Algorithm
+          // Object velocities are estimated using a Kalman Filter
           std::vector<Point_t> detectedCenters(keypoints_.size());
-          cv::KeyPoint::convert(keypoints_, detectedCenters);
+          for (int i = 0; i < keypoints_.size(); i++)
+          {
+            detectedCenters.at(i).x = keypoints_.at(i).pt.x;
+            detectedCenters.at(i).y = keypoints_.at(i).pt.y;
+            detectedCenters.at(i).z = 0;  // Currently unused!
+          }
 
           std::vector<cv::Rect> detectedBoundingBoxes(contour.size());
-          for (int i=0; i<contour.size(); i++)
+          for (int i = 0; i < contour.size(); i++)
+          {
             detectedBoundingBoxes.at(i) = cv::boundingRect(contour.at(i));
+          }
 
           tracker_->Update(detectedCenters, detectedBoundingBoxes, CTracker::CentersDist);
 
-
+          // Plotten..
           for (auto p : detectedCenters)
           {
-            cv::circle(fgMaskWithKeypoints, p, 3, cv::Scalar(0, 255, 0), 1);
+            cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
           }
 
           for (int i = 0; i < tracker_->tracks.size(); i++)
@@ -136,34 +131,8 @@ namespace  costmap_converter
           }
 
           visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
-//          if(keypoints_.empty())
-//            return;
-
-//          if(kf_.statePre.at<float>(0)==0)
-//          {
-//            kf_.statePre.at<float>(0) = keypoints_.at(0).pt.x;
-//            kf_.statePre.at<float>(1) = keypoints_.at(0).pt.y;
-//          }
-
-//        // Geschwindigkeit berechnen, Kalman filter
-//          cv::Mat prediction = kf_.predict();
-//          cv::Point predictedPoint(prediction.at<float>(0), prediction.at<float>(1));
-
-//          cv::Mat_<float> measurement(3,1);
-//          measurement(0) = keypoints_.at(0).pt.x;
-//          measurement(1) = keypoints_.at(0).pt.y;
-//          measurement(2) = 0;
-//          cv::Mat estimated = kf_.correct(measurement);
-//          cv::Point statePt(estimated.at<float>(0), estimated.at<float>(1));
-
-//          ROS_INFO("Vel_x: %f, Vely: %f", estimated.at<float>(4), estimated.at<float>(5));
-//          cv::circle(fgMaskWithKeypoints, predictedPoint, 3, cv::Scalar(0,255,0));
-//          cv::circle(fgMaskWithKeypoints, statePt, 4, cv::Scalar(255,0,0));
-
-//          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
-
-
         }
+
         // ObstacleContainerPtr mit Werten füllen
     }
 
