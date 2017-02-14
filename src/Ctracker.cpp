@@ -13,10 +13,10 @@ CTracker::CTracker(track_t dt_, track_t Accel_noise_mag_, track_t dist_thres_, s
 // ---------------------------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::vector< std::vector<cv::Point> >& contour)
+void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::vector< std::vector<cv::Point> >& contours)
 {
   // Each contour has a centroid
-  assert(detectedCentroid.size() == contour.size());
+  assert(detectedCentroid.size() == contours.size());
 
   // -----------------------------------
   // If there is no tracks yet, then every cv::Point begins its own track.
@@ -27,7 +27,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     for (size_t i = 0; i < detectedCentroid.size(); ++i)
     {
       tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contour[i], dt, Accel_noise_mag, NextTrackID++)));
+          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], dt, Accel_noise_mag, NextTrackID++)));
     }
   }
 
@@ -98,7 +98,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     if (find(assignment.begin(), assignment.end(), i) == assignment.end())
     {
       tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contour[i], dt, Accel_noise_mag, NextTrackID++)));
+          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], dt, Accel_noise_mag, NextTrackID++)));
     }
   }
 
@@ -111,7 +111,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     if (assignment[i] != -1) // If we have assigned detect, then update using its coordinates,
     {
       tracks[i]->skipped_frames = 0;
-      tracks[i]->Update(detectedCentroid[assignment[i]], contour[assignment[i]], true, max_trace_length);
+      tracks[i]->Update(detectedCentroid[assignment[i]], contours[assignment[i]], true, max_trace_length);
     }
     else // if not continue using predictions
     {

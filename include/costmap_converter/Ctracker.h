@@ -44,11 +44,15 @@ public:
 
   std::vector<cv::Point> getLastContour() const
   {
+    //TODO: Umrechnung in m
+    // lastContour [px] * costmapResolution [m/px] = lastContour [m/s]
     return lastContour;
   }
 
   Point_t getEstimatedVelocity() const
   {
+    // TODO: Umrechnung in m/s!
+    // KF.LastVelocity [px/s] * costmapResolution [m/px] = vel [m/s]
     return KF.LastVelocity;
   }
 
@@ -78,13 +82,12 @@ private:
   track_t dt;
 
   track_t Accel_noise_mag;
-
   // distance threshold. Pairs of points with higher distance are not considered in the assignment problem
   track_t dist_thres;
   // Maximum number of frames the track is maintained without seeing the object in the measurement data
   size_t maximum_allowed_skipped_frames;
   // Maximum trace length
   size_t max_trace_length;
-
+  // ID for the upcoming CTrack object
   size_t NextTrackID;
 };

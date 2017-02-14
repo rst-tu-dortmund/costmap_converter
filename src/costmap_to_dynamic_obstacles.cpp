@@ -1,6 +1,7 @@
 #include "costmap_converter/costmap_to_dynamic_obstacles.h"
 
 #include <pluginlib/class_list_macros.h>
+#include <tf/tf.h>
 
 #include <opencv2/highgui.hpp> //TODO: Wieder raus, nur zum debuggen..
 
@@ -77,6 +78,7 @@ void CostmapToDynamicObstacles::compute()
 
   bgSub_->apply(costmapMat_, fgMask_, originX, originY);
 
+
   /////////////////////////////// Blob detection /////////////////////////////////////
   // Centers and contours of Blobs are detected
   if (!fgMask_.empty())
@@ -94,13 +96,8 @@ void CostmapToDynamicObstacles::compute()
     cv::erode(fgMask, fgMask, element);  // Eingangsbild = Ausgangsbild
 
     blobDet_->detect(fgMask, keypoints_);
-    std::vector<std::vector<cv::Point>> contour = blobDet_->getContours();
+    std::vector<std::vector<cv::Point>> contours = blobDet_->getContours();
 
-    cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
-    cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
-    //          cv::drawKeypoints(fgMask, keypoints_, fgMaskWithKeypoints,
-    //          cv::Scalar(0,0,255), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    //          visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
 
     ////////////////////////////// Tracking ////////////////////////////////////////////
     // Objects are assigned to objects from previous frame based on Hungarian Algorithm
@@ -113,13 +110,13 @@ void CostmapToDynamicObstacles::compute()
       detectedCenters.at(i).z = 0; // Currently unused!
     }
 
-    std::vector<cv::Rect> detectedBoundingBoxes(contour.size());
-    for (int i = 0; i < contour.size(); i++)
-      detectedBoundingBoxes.at(i) = cv::boundingRect(contour.at(i));
+    tracker_->Update(detectedCenters, contours);
 
-    tracker_->Update(detectedCenters, contour);
 
-    // Plotten..
+    ///////////////////////////////////// Output ///////////////////////////////////////
+    cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
+    cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
+
     for (auto p : detectedCenters)
       cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
 
@@ -129,13 +126,72 @@ void CostmapToDynamicObstacles::compute()
 
     visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
 
-    //////////////////////////// ObstacleContainerPtr füllen ///////////////////////////
-    if(!tracker_->tracks.empty())
-      ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f",
-               tracker_->tracks.at(0)->getEstimatedVelocity().x,
-               tracker_->tracks.at(0)->getEstimatedVelocity().y,
-               tracker_->tracks.at(0)->getEstimatedVelocity().z);
+//    if(!tracker_->tracks.empty())
+//    {
+//      Point_t vel = tracker_->tracks.at(0)->getEstimatedVelocity();
+//      ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f", vel.x, vel.y, vel.z);
+//    }
   }
+
+
+  //////////////////////////// ObstacleContainerPtr füllen /////////////////////////////
+  ObstacleContainerPtr obstacles (new teb_local_planner::ObstacleMsg);
+  // header.seq is automatically filled
+  obstacles->header.stamp = ros::Time::now();
+  obstacles->header.frame_id = "1"; //Global frame /map
+
+  // For all tracked objects
+  for (unsigned int i = 0; i < tracker_->tracks.size(); i++)
+  {
+    geometry_msgs::PolygonStamped polygonStamped;
+    // TODO: Header?
+    polygonStamped.header.stamp = ros::Time::now();
+    polygonStamped.header.frame_id = "1"; // Global frame /map
+
+    // Set obstacle ID
+    obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
+
+    // Append each polygon point
+    for (unsigned int j = 0; j < tracker_->tracks.at(i)->getLastContour().size(); j++)
+    {
+      polygonStamped.polygon.points.push_back(geometry_msgs::Point32());
+      polygonStamped.polygon.points.at(j).x = tracker_->tracks.at(i)->getLastContour().at(j).x;
+      polygonStamped.polygon.points.at(j).y = tracker_->tracks.at(i)->getLastContour().at(j).y;
+      polygonStamped.polygon.points.at(j).z = 0;
+
+      obstacles->obstacles.push_back(polygonStamped);
+    }
+
+    // Set orientation
+    geometry_msgs::QuaternionStamped orientationStamped;
+    //TODO: Header?
+    orientationStamped.header.stamp = ros::Time::now();
+    orientationStamped.header.frame_id = "1"; //Global frame /map
+    Point_t vel = tracker_->tracks.at(i)->getEstimatedVelocity();
+    double yaw = std::atan2(vel.y, vel.x);
+    ROS_INFO("yaw: %f", yaw);
+    orientationStamped.quaternion = tf::createQuaternionMsgFromYaw(yaw);
+    obstacles->orientations.push_back(orientationStamped);
+
+    // Set velocity
+    geometry_msgs::TwistWithCovariance velocities;
+    velocities.twist.linear.x = std::sqrt(vel.x*vel.x + vel.y*vel.y);
+    velocities.twist.linear.y = 0;
+    velocities.twist.linear.z = 0;
+    velocities.twist.angular.x = 0;
+    velocities.twist.angular.y = 0;
+    velocities.twist.angular.z = 0;
+
+    // TODO: use correct covariance matrix
+    velocities.covariance = {1, 0, 0, 0, 0, 0,
+                             0, 1, 0, 0, 0, 0,
+                             0, 0, 1, 0, 0, 0,
+                             0, 0, 0, 1, 0, 0,
+                             0, 0, 0, 0, 1, 0,
+                             0, 0, 0, 0, 0, 1};
+  }
+
+  updateObstacleContainer(obstacles);
 }
 
 void CostmapToDynamicObstacles::setCostmap2D(costmap_2d::Costmap2D* costmap)
