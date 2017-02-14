@@ -13,9 +13,10 @@ CTracker::CTracker(track_t dt_, track_t Accel_noise_mag_, track_t dist_thres_, s
 // ---------------------------------------------------------------------------
 //
 // ---------------------------------------------------------------------------
-void CTracker::Update(const std::vector<Point_t>& detections, const std::vector<cv::Rect>& rects, DistType distType)
+void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::vector< std::vector<cv::Point> >& contour)
 {
-  assert(detections.size() == rects.size());
+  // Each contour has a centroid
+  assert(detectedCentroid.size() == contour.size());
 
   // -----------------------------------
   // If there is no tracks yet, then every cv::Point begins its own track.
@@ -23,47 +24,30 @@ void CTracker::Update(const std::vector<Point_t>& detections, const std::vector<
   if (tracks.size() == 0)
   {
     // If no tracks yet
-    for (size_t i = 0; i < detections.size(); ++i)
+    for (size_t i = 0; i < detectedCentroid.size(); ++i)
     {
       tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detections[i], rects[i], dt, Accel_noise_mag, NextTrackID++)));
+          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contour[i], dt, Accel_noise_mag, NextTrackID++)));
     }
   }
 
-  size_t N = tracks.size();     // треки
-  size_t M = detections.size(); // детекты
+  size_t N = tracks.size();
+  size_t M = detectedCentroid.size();
 
-  assignments_t assignment; // назначения
+  assignments_t assignment;
 
   if (!tracks.empty())
   {
-    // Distance matrix of N-th Track to the M-th detection
+    // Distance matrix of N-th Track to the M-th detectedCentroid
     distMatrix_t Cost(N * M);
 
-    // -----------------------------------
-    // Треки уже есть, составим матрицу расстояний
-    // -----------------------------------
-    switch (distType)
+    // calculate distance between the blobs centroids
+    for (size_t i = 0; i < tracks.size(); i++)
     {
-    case CentersDist:
-      for (size_t i = 0; i < tracks.size(); i++)
+      for (size_t j = 0; j < detectedCentroid.size(); j++)
       {
-        for (size_t j = 0; j < detections.size(); j++)
-        {
-          Cost[i + j * N] = tracks[i]->CalcDist(detections[j]);
-        }
+        Cost[i + j * N] = tracks[i]->CalcDist(detectedCentroid[j]);
       }
-      break;
-
-    case RectsDist:
-      for (size_t i = 0; i < tracks.size(); i++)
-      {
-        for (size_t j = 0; j < detections.size(); j++)
-        {
-          Cost[i + j * N] = tracks[i]->CalcDist(rects[j]);
-        }
-      }
-      break;
     }
 
     // -----------------------------------
@@ -109,12 +93,12 @@ void CTracker::Update(const std::vector<Point_t>& detections, const std::vector<
   // -----------------------------------
   // Search for unassigned detects and start new tracks for them.
   // -----------------------------------
-  for (size_t i = 0; i < detections.size(); ++i)
+  for (size_t i = 0; i < detectedCentroid.size(); ++i)
   {
     if (find(assignment.begin(), assignment.end(), i) == assignment.end())
     {
       tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detections[i], rects[i], dt, Accel_noise_mag, NextTrackID++)));
+          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contour[i], dt, Accel_noise_mag, NextTrackID++)));
     }
   }
 
@@ -127,11 +111,11 @@ void CTracker::Update(const std::vector<Point_t>& detections, const std::vector<
     if (assignment[i] != -1) // If we have assigned detect, then update using its coordinates,
     {
       tracks[i]->skipped_frames = 0;
-      tracks[i]->Update(detections[assignment[i]], rects[assignment[i]], true, max_trace_length);
+      tracks[i]->Update(detectedCentroid[assignment[i]], contour[assignment[i]], true, max_trace_length);
     }
     else // if not continue using predictions
     {
-      tracks[i]->Update(Point_t(), cv::Rect(), false, max_trace_length);
+      tracks[i]->Update(Point_t(), std::vector<cv::Point>(), false, max_trace_length);
     }
   }
 }

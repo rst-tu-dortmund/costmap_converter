@@ -13,8 +13,8 @@
 class CTrack
 {
 public:
-  CTrack(const Point_t& p, const cv::Rect& rect, track_t dt, track_t Accel_noise_mag, size_t trackID)
-      : track_id(trackID), skipped_frames(0), prediction(p), lastRect(rect), KF(p, dt, Accel_noise_mag)
+  CTrack(const Point_t& p, const std::vector<cv::Point>& contour, track_t dt, track_t Accel_noise_mag, size_t trackID)
+      : track_id(trackID), skipped_frames(0), prediction(p), lastContour(contour), KF(p, dt, Accel_noise_mag)
   {
   }
 
@@ -24,33 +24,14 @@ public:
     return std::sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
   }
 
-  // TODO: Add z-Dimension
-  track_t CalcDist(const cv::Rect& r)
-  {
-    cv::Rect rect = GetLastRect();
-
-    std::array<track_t, 6> diff;
-    diff[0] = prediction.x - lastRect.width / 2 - r.x;
-    diff[1] = prediction.y - lastRect.height / 2 - r.y;
-    diff[2] = static_cast<track_t>(lastRect.width - r.width);
-    diff[3] = static_cast<track_t>(lastRect.height - r.height);
-
-    track_t dist = 0;
-    for (size_t i = 0; i < diff.size(); ++i)
-    {
-      dist += diff[i] * diff[i];
-    }
-    return std::sqrt(dist);
-  }
-
-  void Update(const Point_t& p, const cv::Rect& rect, bool dataCorrect, size_t max_trace_length)
+  void Update(const Point_t& p, const std::vector<cv::Point>& contour, bool dataCorrect, size_t max_trace_length)
   {
     KF.Prediction();
     prediction = KF.Update(p, dataCorrect);
 
     if (dataCorrect)
     {
-      lastRect = rect;
+      lastContour = contour;
     }
 
     if (trace.size() > max_trace_length)
@@ -61,19 +42,23 @@ public:
     trace.push_back(prediction);
   }
 
+  std::vector<cv::Point> getLastContour() const
+  {
+    return lastContour;
+  }
+
+  Point_t getEstimatedVelocity() const
+  {
+    return KF.LastVelocity;
+  }
+
   std::vector<Point_t> trace;
   size_t track_id;
   size_t skipped_frames;
 
-  cv::Rect GetLastRect()
-  {
-    return cv::Rect(static_cast<int>(prediction.x - lastRect.width / 2),
-                    static_cast<int>(prediction.y - lastRect.height / 2), lastRect.width, lastRect.height);
-  }
-
 private:
   Point_t prediction;
-  cv::Rect lastRect;
+  std::vector<cv::Point> lastContour; // Contour liegt immer auf ganzen Pixeln -> Integer Punkt
   TKalmanFilter KF;
 };
 
@@ -85,14 +70,8 @@ public:
            size_t max_trace_length_ = 10);
   ~CTracker(void);
 
-  enum DistType
-  {
-    CentersDist = 0,
-    RectsDist = 1
-  };
-
   std::vector<std::unique_ptr<CTrack>> tracks;
-  void Update(const std::vector<Point_t>& detections, const std::vector<cv::Rect>& rects, DistType distType);
+  void Update(const std::vector<Point_t>& detectedCentroid, const std::vector<std::vector<cv::Point> > &contour);
 
 private:
   // time for one step of the filter

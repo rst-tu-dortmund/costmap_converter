@@ -117,18 +117,24 @@ void CostmapToDynamicObstacles::compute()
     for (int i = 0; i < contour.size(); i++)
       detectedBoundingBoxes.at(i) = cv::boundingRect(contour.at(i));
 
-    tracker_->Update(detectedCenters, detectedBoundingBoxes, CTracker::CentersDist);
+    tracker_->Update(detectedCenters, contour);
 
     // Plotten..
     for (auto p : detectedCenters)
       cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
 
     for (int i = 0; i < tracker_->tracks.size(); i++)
-      cv::rectangle(fgMaskWithKeypoints, tracker_->tracks[i]->GetLastRect(), cv::Scalar(0, 0, 255), 1);
+      cv::rectangle(fgMaskWithKeypoints, cv::boundingRect(tracker_->tracks[i]->getLastContour()),
+                    cv::Scalar(0, 0, 255), 1);
 
     visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
 
     //////////////////////////// ObstacleContainerPtr füllen ///////////////////////////
+    if(!tracker_->tracks.empty())
+      ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f",
+               tracker_->tracks.at(0)->getEstimatedVelocity().x,
+               tracker_->tracks.at(0)->getEstimatedVelocity().y,
+               tracker_->tracks.at(0)->getEstimatedVelocity().z);
   }
 }
 
