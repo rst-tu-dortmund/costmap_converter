@@ -14,6 +14,6 @@ public:
   Point_t Update(Point_t p, bool DataCorrect);
   cv::KalmanFilter* kalman;
   track_t dt;
-  Point_t LastPosition;
-  Point_t LastVelocity;
+  Point_t LastPosition; // contour in [px]
+  Point_t LastVelocity; // velocity in [px/s]
 };

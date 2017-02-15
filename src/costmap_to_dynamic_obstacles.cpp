@@ -78,85 +78,87 @@ void CostmapToDynamicObstacles::compute()
 
   bgSub_->apply(costmapMat_, fgMask_, originX, originY);
 
+  // if no foreground object is detected, no ObstacleMsgs need to be published
+  if (fgMask_.empty())
+    return;
+
 
   /////////////////////////////// Blob detection /////////////////////////////////////
   // Centers and contours of Blobs are detected
-  if (!fgMask_.empty())
+  // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
+  cv::Mat fgMask = fgMask_.clone();
+
+  // Closing Operation
+  int morph_size = 1;
+  cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                                              cv::Size(2 * morph_size + 1, 2 * morph_size + 1),
+                                              cv::Point(morph_size, morph_size));
+  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
+  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
+  cv::erode(fgMask, fgMask, element);  // Eingangsbild = Ausgangsbild
+
+  blobDet_->detect(fgMask, keypoints_);
+  std::vector<std::vector<cv::Point>> contours = blobDet_->getContours();
+
+
+  ////////////////////////////// Tracking ////////////////////////////////////////////
+  // Objects are assigned to objects from previous frame based on Hungarian Algorithm
+  // Object velocities are estimated using a Kalman Filter
+  std::vector<Point_t> detectedCenters(keypoints_.size());
+  for (int i = 0; i < keypoints_.size(); i++)
   {
-    // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
-    cv::Mat fgMask = fgMask_.clone();
-
-    // Closing Operation
-    int morph_size = 1;
-    cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE,
-                                                cv::Size(2 * morph_size + 1, 2 * morph_size + 1),
-                                                cv::Point(morph_size, morph_size));
-    cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
-    cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
-    cv::erode(fgMask, fgMask, element);  // Eingangsbild = Ausgangsbild
-
-    blobDet_->detect(fgMask, keypoints_);
-    std::vector<std::vector<cv::Point>> contours = blobDet_->getContours();
-
-
-    ////////////////////////////// Tracking ////////////////////////////////////////////
-    // Objects are assigned to objects from previous frame based on Hungarian Algorithm
-    // Object velocities are estimated using a Kalman Filter
-    std::vector<Point_t> detectedCenters(keypoints_.size());
-    for (int i = 0; i < keypoints_.size(); i++)
-    {
-      detectedCenters.at(i).x = keypoints_.at(i).pt.x;
-      detectedCenters.at(i).y = keypoints_.at(i).pt.y;
-      detectedCenters.at(i).z = 0; // Currently unused!
-    }
-
-    tracker_->Update(detectedCenters, contours);
-
-
-    ///////////////////////////////////// Output ///////////////////////////////////////
-    cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
-    cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
-
-    for (auto p : detectedCenters)
-      cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
-
-    for (int i = 0; i < tracker_->tracks.size(); i++)
-      cv::rectangle(fgMaskWithKeypoints, cv::boundingRect(tracker_->tracks[i]->getLastContour()),
-                    cv::Scalar(0, 0, 255), 1);
-
-    visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
-
-//    if(!tracker_->tracks.empty())
-//    {
-//      Point_t vel = tracker_->tracks.at(0)->getEstimatedVelocity();
-//      ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f", vel.x, vel.y, vel.z);
-//    }
+    detectedCenters.at(i).x = keypoints_.at(i).pt.x;
+    detectedCenters.at(i).y = keypoints_.at(i).pt.y;
+    detectedCenters.at(i).z = 0; // Currently unused!
   }
+
+  tracker_->Update(detectedCenters, contours);
+
+
+  ///////////////////////////////////// Output ///////////////////////////////////////
+  cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
+  cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
+
+  for (auto p : detectedCenters)
+    cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
+
+  for (int i = 0; i < tracker_->tracks.size(); i++)
+    cv::rectangle(fgMaskWithKeypoints, cv::boundingRect(tracker_->tracks[i]->getLastContour()),
+                  cv::Scalar(0, 0, 255), 1);
+
+  visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+
+//  if(!tracker_->tracks.empty())
+//  {
+//    Point_t vel = getEstimatedVelocityOfObject(0);
+//    ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f", vel.x, vel.y, vel.z);
+//  }
 
 
   //////////////////////////// ObstacleContainerPtr füllen /////////////////////////////
   ObstacleContainerPtr obstacles (new teb_local_planner::ObstacleMsg);
   // header.seq is automatically filled
   obstacles->header.stamp = ros::Time::now();
-  obstacles->header.frame_id = "1"; //Global frame /map
+  obstacles->header.frame_id = "/map"; //Global frame /map
 
   // For all tracked objects
   for (unsigned int i = 0; i < tracker_->tracks.size(); i++)
   {
     geometry_msgs::PolygonStamped polygonStamped;
     // TODO: Header?
-    polygonStamped.header.stamp = ros::Time::now();
-    polygonStamped.header.frame_id = "1"; // Global frame /map
+//    polygonStamped.header.stamp = ros::Time::now();
+//    polygonStamped.header.frame_id = "/map"; // Global frame /map
 
     // Set obstacle ID
     obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
 
     // Append each polygon point
-    for (unsigned int j = 0; j < tracker_->tracks.at(i)->getLastContour().size(); j++)
+
+    for (unsigned int j = 0; j < getContour(i).size(); j++)
     {
       polygonStamped.polygon.points.push_back(geometry_msgs::Point32());
-      polygonStamped.polygon.points.at(j).x = tracker_->tracks.at(i)->getLastContour().at(j).x;
-      polygonStamped.polygon.points.at(j).y = tracker_->tracks.at(i)->getLastContour().at(j).y;
+      polygonStamped.polygon.points.at(j).x = getContour(i).at(j).x;
+      polygonStamped.polygon.points.at(j).y = getContour(i).at(j).y;
       polygonStamped.polygon.points.at(j).z = 0;
 
       obstacles->obstacles.push_back(polygonStamped);
@@ -164,10 +166,10 @@ void CostmapToDynamicObstacles::compute()
 
     // Set orientation
     geometry_msgs::QuaternionStamped orientationStamped;
-    //TODO: Header?
-    orientationStamped.header.stamp = ros::Time::now();
-    orientationStamped.header.frame_id = "1"; //Global frame /map
-    Point_t vel = tracker_->tracks.at(i)->getEstimatedVelocity();
+//  TODO: Header?
+//    orientationStamped.header.stamp = ros::Time::now();
+//    orientationStamped.header.frame_id = "/map"; //Global frame /map
+    Point_t vel = getEstimatedVelocityOfObject(i);
     double yaw = std::atan2(vel.y, vel.x);
     ROS_INFO("yaw: %f", yaw);
     orientationStamped.quaternion = tf::createQuaternionMsgFromYaw(yaw);
@@ -228,6 +230,33 @@ void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleContainerPtr obs
 {
   boost::mutex::scoped_lock lock(mutex_);
   obstacles_ = obstacles;
+}
+
+Point_t CostmapToDynamicObstacles::getEstimatedVelocityOfObject(unsigned int idx)
+{
+  // TODO: Eigenbewegung des Roboters berücksichtigen!
+
+  // vel [px/s] * costmapResolution [m/px] = vel [m/s]
+  Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution();
+  return vel;
+}
+
+std::vector<Point_t> CostmapToDynamicObstacles::getContour(unsigned int idx)
+{
+  // contour [px] * costmapResolution [m/px] = contour [m]
+  std::vector<cv::Point> contour2i = tracker_->tracks.at(idx)->getLastContour();
+  std::vector<Point_t> contour3f;
+  contour3f.reserve(contour2i.size());
+
+  Point_t costmapOrigin(costmap_->getOriginX(), costmap_->getOriginY(), 0);
+
+  for (int i = 0; i < contour2i.size(); i++)
+  {
+    contour3f.push_back((Point_t(contour2i.at(i).x, contour2i.at(i).y, 0.0)*costmap_->getResolution())
+                        + costmapOrigin); // Shift to /map
+  }
+
+  return contour3f;
 }
 
 void CostmapToDynamicObstacles::visualize(std::string name, cv::Mat image)
