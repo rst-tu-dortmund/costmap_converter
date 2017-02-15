@@ -69,6 +69,20 @@ public:
 
 protected:
   /**
+   * @brief Converts the estimated velocity of a tracked object to m/s and returns it
+   * @param idx Index of the tracked object in the tracker
+   * @return Point_t, which represents velocity in [m/s] of object(idx) in x,y,z coordinates
+   */
+  Point_t getEstimatedVelocityOfObject(unsigned int idx);
+
+  /**
+   * @brief Gets the last observed contour of a object and converts it from [px] to [m]
+   * @param idx Index of the tracked object in the tracker
+   * @return vector of Point_t, which represents the last observed contour in [m] in x,y,z coordinates
+   */
+  std::vector<Point_t> getContour(unsigned int idx);
+
+  /**
    * @brief Thread-safe update of the internal obstacle container (that is shared using getObstacles() from outside this
    * class)
    * @param obstacles Updated obstacle container

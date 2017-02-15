@@ -42,17 +42,15 @@ public:
     trace.push_back(prediction);
   }
 
+  // Returns contour in [px], not in [m]!
   std::vector<cv::Point> getLastContour() const
   {
-    //TODO: Umrechnung in m
-    // lastContour [px] * costmapResolution [m/px] = lastContour [m/s]
     return lastContour;
   }
 
+  // Returns velocity in [px/s], not in [m/s]!
   Point_t getEstimatedVelocity() const
   {
-    // TODO: Umrechnung in m/s!
-    // KF.LastVelocity [px/s] * costmapResolution [m/px] = vel [m/s]
     return KF.LastVelocity;
   }
 
