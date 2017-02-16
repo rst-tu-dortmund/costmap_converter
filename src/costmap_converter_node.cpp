@@ -70,7 +70,7 @@ public:
       ROS_INFO_STREAM(converter_plugin << " loaded.");
       
       costmap_sub_ = n_.subscribe("/robot_0/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
-      polygon_pub_ = n_.advertise<geometry_msgs::PolygonStamped>("/costmap_polygons", 1000);
+      obstacle_pub_ = n_.advertise<teb_local_planner::ObstacleMsg>("/costmap_obstacles", 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
       
       frame_id_ = "/map";
@@ -113,25 +113,18 @@ public:
       // convert
       converter_->updateCostmap2D();
       converter_->compute();
-      costmap_converter::PolygonContainerConstPtr polygons = converter_->getPolygons();
-      if (!polygons)
+      costmap_converter::ObstacleContainerConstPtr obstacles = converter_->getObstacles();
+
+      if (!obstacles)
         return;
 
-      for (std::size_t i=0; i < polygons->size(); ++i)
-      {
-         geometry_msgs::PolygonStamped polygon;
-         polygon.header.frame_id = msg->header.frame_id;
-         polygon.header.stamp = ros::Time::now();
-         polygon.polygon = polygons->at(i);
-         polygon_pub_.publish(polygon);       
-      }
+      obstacle_pub_.publish(obstacles);
       
-      
-      publishAsMarker(msg->header.frame_id, *polygons, marker_pub_);
+      publishAsMarker(msg->header.frame_id, obstacles->obstacles, marker_pub_);
       
   }
   
-  void publishAsMarker(const std::string& frame_id, const std::vector<geometry_msgs::Polygon>& polygons, ros::Publisher& marker_pub)
+  void publishAsMarker(const std::string& frame_id, const std::vector<geometry_msgs::PolygonStamped>& polygonStamped, ros::Publisher& marker_pub)
   {
     visualization_msgs::Marker line_list;
     line_list.header.frame_id = frame_id;
@@ -147,31 +140,31 @@ public:
     line_list.color.g = 1.0;
     line_list.color.a = 1.0;
     
-    for (std::size_t i=0; i<polygons.size(); ++i)
+    for (std::size_t i=0; i<polygonStamped.size(); ++i)
     {
-      for (int j=0; j< (int)polygons[i].points.size()-1; ++j)
+      for (int j=0; j< (int)polygonStamped[i].polygon.points.size()-1; ++j)
       {
         geometry_msgs::Point line_start;
-        line_start.x = polygons[i].points[j].x;
-        line_start.y = polygons[i].points[j].y;
+        line_start.x = polygonStamped[i].polygon.points[j].x;
+        line_start.y = polygonStamped[i].polygon.points[j].y;
         line_list.points.push_back(line_start);
         geometry_msgs::Point line_end;
-        line_end.x = polygons[i].points[j+1].x;
-        line_end.y = polygons[i].points[j+1].y;
+        line_end.x = polygonStamped[i].polygon.points[j+1].x;
+        line_end.y = polygonStamped[i].polygon.points[j+1].y;
         line_list.points.push_back(line_end);
       }     
       // close loop for current polygon
-      if (!polygons[i].points.empty() && polygons[i].points.size() != 2 )  
+      if (!polygonStamped[i].polygon.points.empty() && polygonStamped[i].polygon.points.size() != 2 )
       {
         geometry_msgs::Point line_start;
-        line_start.x = polygons[i].points.back().x;
-        line_start.y = polygons[i].points.back().y;
+        line_start.x = polygonStamped[i].polygon.points.back().x;
+        line_start.y = polygonStamped[i].polygon.points.back().y;
         line_list.points.push_back(line_start);
         if (line_list.points.size() % 2 != 0)
         {
           geometry_msgs::Point line_end;
-          line_end.x = polygons[i].points.front().x;
-          line_end.y = polygons[i].points.front().y;
+          line_end.x = polygonStamped[i].polygon.points.front().x;
+          line_end.y = polygonStamped[i].polygon.points.front().y;
           line_list.points.push_back(line_end);
         }
       }
@@ -187,7 +180,7 @@ private:
   
   ros::NodeHandle n_;
   ros::Subscriber costmap_sub_;
-  ros::Publisher polygon_pub_;
+  ros::Publisher obstacle_pub_;
   ros::Publisher marker_pub_;
   
   std::string frame_id_;

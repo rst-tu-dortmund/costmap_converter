@@ -121,7 +121,7 @@ public:
      */
     virtual PolygonContainerConstPtr getPolygons(){return PolygonContainerConstPtr();} //TODO: getPolygons() -> getObstacles()
       
-    
+    virtual ObstacleContainerConstPtr getObstacles(){return ObstacleContainerConstPtr();}
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
       * The worker is implemented as a timer event that is invoked at a specific \c rate.
