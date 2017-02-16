@@ -149,20 +149,19 @@ void CostmapToDynamicObstacles::compute()
 //    polygonStamped.header.stamp = ros::Time::now();
 //    polygonStamped.header.frame_id = "/map"; // Global frame /map
 
-    // Set obstacle ID
-    obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
-
     // Append each polygon point
-
     for (unsigned int j = 0; j < getContour(i).size(); j++)
     {
       polygonStamped.polygon.points.push_back(geometry_msgs::Point32());
       polygonStamped.polygon.points.at(j).x = getContour(i).at(j).x;
       polygonStamped.polygon.points.at(j).y = getContour(i).at(j).y;
       polygonStamped.polygon.points.at(j).z = 0;
-
-      obstacles->obstacles.push_back(polygonStamped);
     }
+
+    obstacles->obstacles.push_back(polygonStamped);
+
+    // Set obstacle ID
+    obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
 
     // Set orientation
     geometry_msgs::QuaternionStamped orientationStamped;
@@ -191,6 +190,8 @@ void CostmapToDynamicObstacles::compute()
                              0, 0, 0, 1, 0, 0,
                              0, 0, 0, 0, 1, 0,
                              0, 0, 0, 0, 0, 1};
+
+    obstacles->velocities.push_back(velocities);
   }
 
   updateObstacleContainer(obstacles);
