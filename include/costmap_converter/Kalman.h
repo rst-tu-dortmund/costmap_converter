@@ -8,7 +8,7 @@
 class TKalmanFilter
 {
 public:
-  TKalmanFilter(Point_t p, track_t deltatime = 0.2, track_t Accel_noise_mag = 0.5);
+  TKalmanFilter(Point_t p, track_t deltatime = 0.2);
   ~TKalmanFilter();
   void Prediction();
   Point_t Update(Point_t p, bool DataCorrect);

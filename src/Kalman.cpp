@@ -5,7 +5,7 @@
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
-TKalmanFilter::TKalmanFilter(Point_t pt, track_t deltatime, track_t Accel_noise_mag)
+TKalmanFilter::TKalmanFilter(Point_t pt, track_t deltatime)
 {
   // time increment (lower values makes target more "massive")
   dt = deltatime;

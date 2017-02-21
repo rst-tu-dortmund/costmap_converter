@@ -3,10 +3,8 @@
 // ---------------------------------------------------------------------------
 // Tracker. Manage tracks. Create, remove, update.
 // ---------------------------------------------------------------------------
-CTracker::CTracker(track_t dt_, track_t Accel_noise_mag_, track_t dist_thres_, size_t maximum_allowed_skipped_frames_,
-                   size_t max_trace_length_)
-    : dt(dt_), Accel_noise_mag(Accel_noise_mag_), dist_thres(dist_thres_),
-      maximum_allowed_skipped_frames(maximum_allowed_skipped_frames_), max_trace_length(max_trace_length_),
+CTracker::CTracker(const Params &parameters)
+    : params(parameters),
       NextTrackID(0)
 {
 }
@@ -27,7 +25,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     for (size_t i = 0; i < detectedCentroid.size(); ++i)
     {
       tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], dt, Accel_noise_mag, NextTrackID++)));
+          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], params.dt, NextTrackID++)));
     }
   }
 
@@ -63,7 +61,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     {
       if (assignment[i] != -1)
       {
-        if (Cost[i + assignment[i] * N] > dist_thres)
+        if (Cost[i + assignment[i] * N] > params.dist_thresh)
         {
           assignment[i] = -1;
           tracks[i]->skipped_frames = 1;
@@ -81,7 +79,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     // -----------------------------------
     for (int i = 0; i < static_cast<int>(tracks.size()); i++)
     {
-      if (tracks[i]->skipped_frames > maximum_allowed_skipped_frames)
+      if (tracks[i]->skipped_frames > params.max_allowed_skipped_frames)
       {
         tracks.erase(tracks.begin() + i);
         assignment.erase(assignment.begin() + i);
@@ -97,8 +95,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
   {
     if (find(assignment.begin(), assignment.end(), i) == assignment.end())
     {
-      tracks.push_back(
-          std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], dt, Accel_noise_mag, NextTrackID++)));
+      tracks.push_back(std::unique_ptr<CTrack>(new CTrack(detectedCentroid[i], contours[i], params.dt, NextTrackID++)));
     }
   }
 
@@ -111,13 +108,18 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     if (assignment[i] != -1) // If we have assigned detect, then update using its coordinates,
     {
       tracks[i]->skipped_frames = 0;
-      tracks[i]->Update(detectedCentroid[assignment[i]], contours[assignment[i]], true, max_trace_length);
+      tracks[i]->Update(detectedCentroid[assignment[i]], contours[assignment[i]], true, params.max_trace_length);
     }
     else // if not continue using predictions
     {
-      tracks[i]->Update(Point_t(), std::vector<cv::Point>(), false, max_trace_length);
+      tracks[i]->Update(Point_t(), std::vector<cv::Point>(), false, params.max_trace_length);
     }
   }
+}
+
+void CTracker::updateParameters(const Params &parameters)
+{
+  params = parameters;
 }
 // ---------------------------------------------------------------------------
 //

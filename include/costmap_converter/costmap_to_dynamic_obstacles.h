@@ -1,14 +1,21 @@
 #ifndef COSTMAP_TO_DYNAMIC_OBSTACLES_H_
 #define COSTMAP_TO_DYNAMIC_OBSTACLES_H_
 
+// ROS
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <costmap_converter/costmap_converter_interface.h>
 
+// OpenCV
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
 
+// dynamic reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <costmap_converter/CostmapToDynamicObstaclesConfig.h>
+
+// Own includes
 #include "background_subtractor.h"
 #include "blob_detector.h"
 #include "Ctracker.h"
@@ -90,20 +97,6 @@ protected:
    */
   void updateObstacleContainer(ObstacleContainerPtr obstacles);
 
-  /*
-   * @brief Convert a generic point type to a geometry_msgs::Polygon
-   * @param point generic 2D point type
-   * @param[out] polygon already instantiated polygon that will be filled with a single point
-   * @tparam Point generic point type that should provide (writable) x and y member fiels.
-   */
-  template <typename Point> static void convertPointToPolygon(const Point& point, geometry_msgs::Polygon& polygon)
-  {
-    polygon.points.resize(1);
-    polygon.points.front().x = point.x;
-    polygon.points.front().y = point.y;
-    polygon.points.front().z = 0;
-  }
-
 private:
   boost::mutex mutex_;
   costmap_2d::Costmap2D* costmap_;
@@ -117,7 +110,23 @@ private:
   ros::Subscriber odomSub_;
   Point_t egoVel_;
 
+  dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime
+
+  /**
+   * @brief Callback for the odometry messages of the observing robot.
+   * Used to convert the velocity of obstacles to the /map frame.
+   * @param msg The Pointer to the nav_msgs::Odometry of the observing robot
+   */
   void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
+
+  /**
+   * @brief Callback for the dynamic_reconfigure node.
+   *
+   * This callback allows to modify parameters dynamically at runtime without restarting the node
+   * @param config Reference to the dynamic reconfigure config
+   * @param level Dynamic reconfigure level
+   */
+  void reconfigureCB(CostmapToDynamicObstaclesConfig& config, uint32_t level);
 };
 
 } // end namespace costmap_converter

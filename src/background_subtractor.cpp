@@ -2,15 +2,11 @@
 #include <opencv2/cvv.hpp>
 #include "costmap_converter/background_subtractor.h"
 
-BackgroundSubtractor::BackgroundSubtractor()
+BackgroundSubtractor::BackgroundSubtractor(const Params &parameters): params(parameters)
 {
-  minSepBetweenSlowAndFastFilter_ = 80;
-  minOccupancyProbability_ = 180;
-  maxOccupancyNeighbors_ = 80;
 }
 
-void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY, double alpha_slow,
-                                 double alpha_fast, double beta)
+void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int shiftY)
 {
   currentFrame_ = image;
 
@@ -60,25 +56,23 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   //  cv::GaussianBlur(occupancyGrid_fast, nearestNeighborMean_fast, cv::Size(size,size), 1, 1, cv::BORDER_REPLICATE);
 
   // compute time mean value for each pixel according to learningrate alpha
-  // occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) +
-  // (1-beta)*nearestNeighborMean_fast;
-  cv::addWeighted(currentFrame_, alpha_fast, occupancyGrid_fast, (1 - alpha_fast), 0, occupancyGrid_fast);
-  cv::addWeighted(occupancyGrid_fast, beta, nearestNeighborMean_fast, (1 - beta), 0, occupancyGrid_fast);
-  // occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) +
-  // (1-beta)*nearestNeighborMean_slow;
-  cv::addWeighted(currentFrame_, alpha_slow, occupancyGrid_slow, (1 - alpha_slow), 0, occupancyGrid_slow);
-  cv::addWeighted(occupancyGrid_slow, beta, nearestNeighborMean_slow, (1 - beta), 0, occupancyGrid_slow);
+  // occupancyGrid_fast = beta*(alpha_fast*currentFrame_ + (1.0-alpha_fast)*occupancyGrid_fast) + (1-beta)*nearestNeighborMean_fast;
+  cv::addWeighted(currentFrame_, params.alpha_fast, occupancyGrid_fast, (1 - params.alpha_fast), 0, occupancyGrid_fast);
+  cv::addWeighted(occupancyGrid_fast, params.beta, nearestNeighborMean_fast, (1 - params.beta), 0, occupancyGrid_fast);
+  // occupancyGrid_slow = beta*(alpha_slow*currentFrame_ + (1.0-alpha_slow)*occupancyGrid_slow) + (1-beta)*nearestNeighborMean_slow;
+  cv::addWeighted(currentFrame_, params.alpha_slow, occupancyGrid_slow, (1 - params.alpha_slow), 0, occupancyGrid_slow);
+  cv::addWeighted(occupancyGrid_slow, params.beta, nearestNeighborMean_slow, (1 - params.beta), 0, occupancyGrid_slow);
 
   // 1) Obstacles should be detected after a minimum response of the fast filter
   //    occupancyGrid_fast > minOccupancyProbability
-  cv::threshold(occupancyGrid_fast, occupancyGrid_fast, minOccupancyProbability_, 0 /*unused*/, cv::THRESH_TOZERO);
+  cv::threshold(occupancyGrid_fast, occupancyGrid_fast, params.minOccupancyProbability, 0 /*unused*/, cv::THRESH_TOZERO);
   // 2) Moving obstacles have a minimum difference between the responses of the slow and fast filter
-  //    occupancyGrid_fast-occupancyGrid_slow > minSepBetweenSlowAndFastFilter
-  cv::threshold(occupancyGrid_fast - occupancyGrid_slow, fgMask, minSepBetweenSlowAndFastFilter_, 255,
+  //    occupancyGrid_fast-occupancyGrid_slow > minSepBetweenFastAndSlowFilter
+  cv::threshold(occupancyGrid_fast - occupancyGrid_slow, fgMask, params.minSepBetweenFastAndSlowFilter, 255,
                 cv::THRESH_BINARY);
   // 3) Dismiss static obstacles
   //    nearestNeighbors_slow < maxOccupancyNeighbors
-  cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, maxOccupancyNeighbors_, 255, cv::THRESH_BINARY_INV);
+  cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, params.maxOccupancyNeighbors, 255, cv::THRESH_BINARY_INV);
   cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
   visualize("Current frame", currentFrame_);
@@ -88,6 +82,14 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   occupancyGrid_fast_vec.push_back(occupancyGrid_fast);
   occupancyGrid_slow_vec.push_back(occupancyGrid_slow);
   fgMask_vec.push_back(fgMask.clone()); // Merkwürdigerweise wird sonst ständig das zweite Bild angehängt
+
+  // Closing Operation
+  cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE,
+                                              cv::Size(2*params.morph_size + 1, 2*params.morph_size + 1),
+                                              cv::Point(params.morph_size, params.morph_size));
+  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
+  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
+  cv::erode(fgMask, fgMask, element);  // Eingangsbild = Ausgangsbild
 }
 
 void BackgroundSubtractor::transformToCurrentFrame(int shiftX, int shiftY)
@@ -123,4 +125,9 @@ void BackgroundSubtractor::WriteMatToYAML(std::string filename, std::vector<cv::
   cv::FileStorage fs("./MasterThesis/Matlab/" + filename + ".yml", cv::FileStorage::WRITE);
   fs << "frames" << matVec;
   fs.release();
+}
+
+void BackgroundSubtractor::updateParameters(const Params &parameters)
+{
+  params = parameters;
 }

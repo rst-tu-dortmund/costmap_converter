@@ -13,46 +13,16 @@ CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
 {
   egoVel_.x = egoVel_.y = egoVel_.z = 0;
   costmap_ = NULL;
-  bgSub_ = new BackgroundSubtractor();
-  // Setup Blob detector
-  // TODO: Make Parameters accessible from rqt tool
-  BlobDetector::Params blobDetParams;
-  blobDetParams.minThreshold = 10;
-  blobDetParams.maxThreshold = 255;
-
-  blobDetParams.filterByColor = true; // actually filterByIntensity
-  blobDetParams.blobColor = 255;      // Extract light blobs
-
-  blobDetParams.filterByArea = true;
-  blobDetParams.minArea = 3; // Filter out blobs with less pixels
-  blobDetParams.maxArea = 300;
-
-  blobDetParams.filterByCircularity = true; // circularity = 4*pi*area/perimeter^2
-  blobDetParams.minCircularity = 0.2;
-  blobDetParams.maxCircularity = 1; // maximal 1 (in case of a circle)
-
-  blobDetParams.filterByInertia = true; // Filter blobs based on their elongation
-  blobDetParams.minInertiaRatio = 0.2;  // minimal 0 (in case of a line)
-  blobDetParams.maxInertiaRatio = 1;    // maximal 1 (in case of a circle)
-
-  blobDetParams.filterByConvexity = false; // Area of the Blob / Area of its convex hull
-  blobDetParams.minConvexity = 0;          // minimal 0
-  blobDetParams.maxConvexity = 1;          // maximal 1
-
-  blobDet_ = BlobDetector::create(blobDetParams);
-
-  float dt = 0.6;
-  float accel_noise_mag = 0.0;
-  float dist_thresh = 60.0;
-  size_t max_allowed_skipped_frames = 1;
-  size_t max_trace_length = 10;
-  tracker_ = new CTracker(dt, accel_noise_mag, dist_thresh, max_allowed_skipped_frames, max_trace_length);
+  dynamic_recfg_ = NULL;
 }
 
 CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
 {
   delete bgSub_;
   delete tracker_;
+
+  if(dynamic_recfg_ != NULL)
+    delete dynamic_recfg_;
 }
 
 void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
@@ -61,7 +31,105 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 
   odomSub_ = nh.subscribe("/robot_0/odom", 1, &CostmapToDynamicObstacles::odomCallback, this);
 
-  // Parameter setzen..
+  //////////////////////////////////
+  // Foreground detection parameters
+  BackgroundSubtractor::Params bgSubParams;
+
+  bgSubParams.alpha_slow = 0.55;
+  nh.param("alpha_slow", bgSubParams.alpha_slow, bgSubParams.alpha_slow);
+
+  bgSubParams.alpha_fast = 0.95;
+  nh.param("alpha_fast", bgSubParams.alpha_fast, bgSubParams.alpha_fast);
+
+  bgSubParams.beta = 0.8;
+  nh.param("beta", bgSubParams.beta, bgSubParams.beta);
+
+  bgSubParams.minOccupancyProbability = 180;
+  nh.param("min_occupancy_probability", bgSubParams.minOccupancyProbability, bgSubParams.minOccupancyProbability);
+
+  bgSubParams.minSepBetweenFastAndSlowFilter = 80;
+  nh.param("min_sep_between_slow_and_fast_filter", bgSubParams.minSepBetweenFastAndSlowFilter, bgSubParams.minSepBetweenFastAndSlowFilter);
+
+  bgSubParams.maxOccupancyNeighbors = 80;
+  nh.param("max_occupancy_neighbors", bgSubParams.maxOccupancyNeighbors, bgSubParams.maxOccupancyNeighbors);
+
+  bgSubParams.morph_size = 1;
+  nh.param("morph_size", bgSubParams.morph_size, bgSubParams.morph_size);
+
+  bgSub_ = new BackgroundSubtractor(bgSubParams);
+
+  ////////////////////////////
+  // Blob detection parameters
+  BlobDetector::Params blobDetParams;
+  // constant parameters, changing these makes no sense
+  blobDetParams.filterByColor = true; // actually filterByIntensity
+  blobDetParams.blobColor = 255;      // Extract light blobs
+
+  blobDetParams.minThreshold = 10;
+  nh.param("min_threshold", blobDetParams.minThreshold, blobDetParams.minThreshold);
+
+  blobDetParams.maxThreshold = 255;
+  nh.param("max_threshold", blobDetParams.maxThreshold, blobDetParams.maxThreshold);
+
+  blobDetParams.filterByArea = true;
+  nh.param("filter_by_area", blobDetParams.filterByArea, blobDetParams.filterByArea);
+
+  blobDetParams.minArea = 3; // Filter out blobs with less pixels
+  nh.param("min_area", blobDetParams.minArea, blobDetParams.minArea);
+
+  blobDetParams.maxArea = 300;
+  nh.param("max_area", blobDetParams.maxArea, blobDetParams.maxArea);
+
+  blobDetParams.filterByCircularity = true; // circularity = 4*pi*area/perimeter^2
+  nh.param("filter_by_circularity", blobDetParams.filterByCircularity, blobDetParams.filterByCircularity);
+
+  blobDetParams.minCircularity = 0.2;
+  nh.param("min_circularity", blobDetParams.minCircularity, blobDetParams.minCircularity);
+
+  blobDetParams.maxCircularity = 1; // maximal 1 (in case of a circle)
+  nh.param("max_circularity", blobDetParams.maxCircularity, blobDetParams.maxCircularity);
+
+  blobDetParams.filterByInertia = true; // Filter blobs based on their elongation
+  nh.param("filter_by_intertia", blobDetParams.filterByInertia, blobDetParams.filterByInertia);
+
+  blobDetParams.minInertiaRatio = 0.2;  // minimal 0 (in case of a line)
+  nh.param("min_inertia_ratio", blobDetParams.minInertiaRatio, blobDetParams.minInertiaRatio);
+
+  blobDetParams.maxInertiaRatio = 1;    // maximal 1 (in case of a circle)
+  nh.param("max_intertia_ratio", blobDetParams.maxInertiaRatio, blobDetParams.maxInertiaRatio);
+
+  blobDetParams.filterByConvexity = false; // Area of the Blob / Area of its convex hull
+  nh.param("filter_by_convexity", blobDetParams.filterByConvexity, blobDetParams.filterByConvexity);
+
+  blobDetParams.minConvexity = 0;          // minimal 0
+  nh.param("min_convexity", blobDetParams.minConvexity, blobDetParams.minConvexity);
+
+  blobDetParams.maxConvexity = 1;          // maximal 1
+  nh.param("max_convexity", blobDetParams.maxConvexity, blobDetParams.maxConvexity);
+
+  blobDet_ = BlobDetector::create(blobDetParams);
+
+  ////////////////////////////////////
+  // Tracking parameters
+  CTracker::Params trackerParams;
+  trackerParams.dt = 0.6;
+  nh.param("dt", trackerParams.dt, trackerParams.dt);
+
+  trackerParams.dist_thresh = 60.0;
+  nh.param("dist_thresh", trackerParams.dist_thresh, trackerParams.dist_thresh);
+
+  trackerParams.max_allowed_skipped_frames = 1;
+  nh.param("max_allowed_skipped_frames", trackerParams.max_allowed_skipped_frames, trackerParams.max_allowed_skipped_frames);
+
+  trackerParams.max_trace_length = 10;
+  nh.param("max_trace_length", trackerParams.max_trace_length, trackerParams.max_trace_length);
+
+  tracker_ = new CTracker(trackerParams);
+
+  // setup dynamic reconfigure
+  dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>(nh);
+  dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>::CallbackType cb = boost::bind(&CostmapToDynamicObstacles::reconfigureCB, this, _1, _2);
+  dynamic_recfg_->setCallback(cb);
 }
 
 void CostmapToDynamicObstacles::compute()
@@ -73,10 +141,8 @@ void CostmapToDynamicObstacles::compute()
   // Dynamic obstacles are separated from static obstacles
   int originX = round(costmap_->getOriginX() / costmap_->getResolution());
   int originY = round(costmap_->getOriginY() / costmap_->getResolution());
-  //        ROS_INFO("Origin x  [m]: %f    Origin_y  [m]: %f",
-  //        costmap_->getOriginX(), costmap_->getOriginY());
-  //        ROS_INFO("Origin x [px]: %d \t Origin_y [px]: %d", originX,
-  //        originY);
+  // ROS_INFO("Origin x  [m]: %f    Origin_y  [m]: %f", costmap_->getOriginX(), costmap_->getOriginY());
+  // ROS_INFO("Origin x [px]: %d \t Origin_y [px]: %d", originX, originY);
 
   bgSub_->apply(costmapMat_, fgMask_, originX, originY);
 
@@ -89,15 +155,6 @@ void CostmapToDynamicObstacles::compute()
   // Centers and contours of Blobs are detected
   // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
   cv::Mat fgMask = fgMask_.clone();
-
-  // Closing Operation
-  int morph_size = 1;
-  cv::Mat element = cv::getStructuringElement(cv::MORPH_ELLIPSE,
-                                              cv::Size(2 * morph_size + 1, 2 * morph_size + 1),
-                                              cv::Point(morph_size, morph_size));
-  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
-  cv::dilate(fgMask, fgMask, element); // Eingangsbild = Ausgangsbild
-  cv::erode(fgMask, fgMask, element);  // Eingangsbild = Ausgangsbild
 
   blobDet_->detect(fgMask, keypoints_);
   std::vector<std::vector<cv::Point>> contours = blobDet_->getContours();
@@ -258,6 +315,45 @@ void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr&
   egoVel_.x = vel.x();
   egoVel_.y = vel.y();
   egoVel_.z = vel.z();
+}
+
+void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &config, uint32_t level)
+{
+  // BackgroundSubtraction Parameters
+  BackgroundSubtractor::Params bgSubParams;
+  bgSubParams.alpha_slow = config.alpha_slow;
+  bgSubParams.alpha_fast = config.alpha_fast;
+  bgSubParams.beta = config.beta;
+  bgSubParams.minOccupancyProbability = config.min_occupancy_probability;
+  bgSubParams.minSepBetweenFastAndSlowFilter = config.min_sep_between_slow_and_fast_filter;
+  bgSubParams.maxOccupancyNeighbors = config.max_occupancy_neighbors;
+  bgSubParams.morph_size = config.morph_size;
+  bgSub_->updateParameters(bgSubParams);
+
+  // BlobDetector Parameters
+  BlobDetector::Params blobDetParams;
+  blobDetParams.filterByColor = true; // actually filterByIntensity
+  blobDetParams.blobColor = 255;      // Extract light blobs
+  blobDetParams.minThreshold = config.min_threshold;
+  blobDetParams.maxThreshold = config.max_threshold;
+  blobDetParams.filterByArea = config.filter_by_area;
+  blobDetParams.minArea = config.min_area;
+  blobDetParams.maxArea = config.max_area;
+  blobDetParams.filterByCircularity = config.filter_by_circularity;
+  blobDetParams.minCircularity = config.min_circularity;
+  blobDetParams.maxCircularity = config.max_circularity;
+  blobDetParams.filterByInertia = config.filter_by_inertia;
+  blobDetParams.minInertiaRatio = config.min_inertia_ratio;
+  blobDetParams.maxInertiaRatio = config.max_inertia_ratio;
+  blobDet_->updateParameters(blobDetParams);
+
+  // Tracking Parameters
+  CTracker::Params trackingParams;
+  trackingParams.dt = config.dt;
+  trackingParams.dist_thresh = config.dist_thresh;
+  trackingParams.max_allowed_skipped_frames = config.max_allowed_skipped_frames;
+  trackingParams.max_trace_length = config.max_trace_length;
+  tracker_->updateParameters(trackingParams);
 }
 
 std::vector<Point_t> CostmapToDynamicObstacles::getContour(unsigned int idx)

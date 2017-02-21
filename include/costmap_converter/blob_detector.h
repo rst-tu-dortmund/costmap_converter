@@ -17,6 +17,8 @@ public:
   virtual void detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypoints,
                       const cv::Mat& mask = cv::Mat()) const;
 
+  void updateParameters(const cv::SimpleBlobDetector::Params& parameters);
+
 protected:
   struct Center
   {

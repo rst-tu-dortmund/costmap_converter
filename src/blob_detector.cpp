@@ -187,3 +187,8 @@ void BlobDetector::findBlobs(const cv::Mat& image, const cv::Mat& binaryImage, s
     curContours.push_back(contours[contourIdx]);
   }
 }
+
+void BlobDetector::updateParameters(const Params &parameters)
+{
+  params = parameters;
+}

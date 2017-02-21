@@ -13,8 +13,12 @@
 class CTrack
 {
 public:
-  CTrack(const Point_t& p, const std::vector<cv::Point>& contour, track_t dt, track_t Accel_noise_mag, size_t trackID)
-      : track_id(trackID), skipped_frames(0), prediction(p), lastContour(contour), KF(p, dt, Accel_noise_mag)
+  CTrack(const Point_t& p, const std::vector<cv::Point>& contour, track_t dt, size_t trackID)
+      : track_id(trackID),
+        skipped_frames(0),
+        prediction(p),
+        lastContour(contour),
+        KF(p, dt)
   {
   }
 
@@ -68,24 +72,24 @@ private:
 class CTracker
 {
 public:
-  CTracker(track_t dt_, track_t Accel_noise_mag_, track_t dist_thres_ = 60, size_t maximum_allowed_skipped_frames_ = 10,
-           size_t max_trace_length_ = 10);
+  struct Params{
+    track_t dt; // time for one step of the filter
+    track_t dist_thresh;// distance threshold. Pairs of points with higher distance are not considered in the assignment problem
+    int max_allowed_skipped_frames; // Maximum number of frames the track is maintained without seeing the object in the measurement data
+    int max_trace_length; // Maximum trace length
+  };
+
+  CTracker(const Params& parameters);
   ~CTracker(void);
 
   std::vector<std::unique_ptr<CTrack>> tracks;
   void Update(const std::vector<Point_t>& detectedCentroid, const std::vector<std::vector<cv::Point> > &contour);
 
-private:
-  // time for one step of the filter
-  track_t dt;
+  void updateParameters(const Params &parameters);
 
-  track_t Accel_noise_mag;
-  // distance threshold. Pairs of points with higher distance are not considered in the assignment problem
-  track_t dist_thres;
-  // Maximum number of frames the track is maintained without seeing the object in the measurement data
-  size_t maximum_allowed_skipped_frames;
-  // Maximum trace length
-  size_t max_trace_length;
+private:
+  // Aggregated parameters for the tracker object
+  Params params;
   // ID for the upcoming CTrack object
   size_t NextTrackID;
 };
