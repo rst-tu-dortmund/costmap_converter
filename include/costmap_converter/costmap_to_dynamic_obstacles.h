@@ -2,6 +2,7 @@
 #define COSTMAP_TO_DYNAMIC_OBSTACLES_H_
 
 #include <ros/ros.h>
+#include <nav_msgs/Odometry.h>
 #include <costmap_converter/costmap_converter_interface.h>
 
 #include <cv_bridge/cv_bridge.h>
@@ -113,6 +114,10 @@ private:
   cv::Ptr<BlobDetector> blobDet_;
   std::vector<cv::KeyPoint> keypoints_;
   CTracker* tracker_;
+  ros::Subscriber odomSub_;
+  Point_t egoVel_;
+
+  void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
 };
 
 } // end namespace costmap_converter

@@ -11,9 +11,9 @@ namespace costmap_converter
 {
 CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
 {
+  egoVel_.x = egoVel_.y = egoVel_.z = 0;
   costmap_ = NULL;
   bgSub_ = new BackgroundSubtractor();
-
   // Setup Blob detector
   // TODO: Make Parameters accessible from rqt tool
   BlobDetector::Params blobDetParams;
@@ -58,6 +58,8 @@ CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
 void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 {
   costmap_ = NULL;
+
+  odomSub_ = nh.subscribe("/robot_0/odom", 1, &CostmapToDynamicObstacles::odomCallback, this);
 
   // Parameter setzen..
 }
@@ -170,7 +172,7 @@ void CostmapToDynamicObstacles::compute()
 //    orientationStamped.header.frame_id = "/map"; //Global frame /map
     Point_t vel = getEstimatedVelocityOfObject(i);
     double yaw = std::atan2(vel.y, vel.x);
-    ROS_INFO("yaw: %f", yaw);
+    //ROS_INFO("yaw: %f", yaw);
     orientationStamped.quaternion = tf::createQuaternionMsgFromYaw(yaw);
     obstacles->orientations.push_back(orientationStamped);
 
@@ -235,11 +237,27 @@ void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleContainerPtr obs
 
 Point_t CostmapToDynamicObstacles::getEstimatedVelocityOfObject(unsigned int idx)
 {
-  // TODO: Eigenbewegung des Roboters berücksichtigen!
-
   // vel [px/s] * costmapResolution [m/px] = vel [m/s]
-  Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution();
+  Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution() + egoVel_;
+
+  ROS_INFO("vel x: %f, vel y: %f, vel z: %f", vel.x, vel.y, vel.z);
+  // velocity in /map frame
   return vel;
+}
+
+void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+  tf::Quaternion pose;
+  tf::quaternionMsgToTF(msg->pose.pose.orientation, pose);
+
+  tf::Vector3 twistLinear;
+  tf::vector3MsgToTF(msg->twist.twist.linear, twistLinear);
+
+  // velocity of the robot in x, y and z coordinates
+  tf::Vector3 vel = tf::quatRotate(pose, twistLinear);
+  egoVel_.x = vel.x();
+  egoVel_.y = vel.y();
+  egoVel_.z = vel.z();
 }
 
 std::vector<Point_t> CostmapToDynamicObstacles::getContour(unsigned int idx)
