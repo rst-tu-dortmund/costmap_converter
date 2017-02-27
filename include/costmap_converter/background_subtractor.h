@@ -7,13 +7,13 @@ class BackgroundSubtractor
 {
 public:
   struct Params{
-    double alpha_slow = 0.55;
-    double alpha_fast = 0.95;
-    double beta = 0.8;
-    double minOccupancyProbability = 180;
-    double minSepBetweenFastAndSlowFilter = 80;
-    double maxOccupancyNeighbors = 80;
-    int morph_size = 1;
+    double alpha_slow;
+    double alpha_fast;
+    double beta;
+    double minOccupancyProbability;
+    double minSepBetweenFastAndSlowFilter;
+    double maxOccupancyNeighbors;
+    int morph_size;
   };
 
   BackgroundSubtractor(const Params& parameters);

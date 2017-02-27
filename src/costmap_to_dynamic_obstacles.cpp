@@ -35,13 +35,13 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   // Foreground detection parameters
   BackgroundSubtractor::Params bgSubParams;
 
-  bgSubParams.alpha_slow = 0.55;
+  bgSubParams.alpha_slow = 0.3;
   nh.param("alpha_slow", bgSubParams.alpha_slow, bgSubParams.alpha_slow);
 
-  bgSubParams.alpha_fast = 0.95;
+  bgSubParams.alpha_fast = 0.85;
   nh.param("alpha_fast", bgSubParams.alpha_fast, bgSubParams.alpha_fast);
 
-  bgSubParams.beta = 0.8;
+  bgSubParams.beta = 0.85;
   nh.param("beta", bgSubParams.beta, bgSubParams.beta);
 
   bgSubParams.minOccupancyProbability = 180;
@@ -50,7 +50,7 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   bgSubParams.minSepBetweenFastAndSlowFilter = 80;
   nh.param("min_sep_between_slow_and_fast_filter", bgSubParams.minSepBetweenFastAndSlowFilter, bgSubParams.minSepBetweenFastAndSlowFilter);
 
-  bgSubParams.maxOccupancyNeighbors = 80;
+  bgSubParams.maxOccupancyNeighbors = 100;
   nh.param("max_occupancy_neighbors", bgSubParams.maxOccupancyNeighbors, bgSubParams.maxOccupancyNeighbors);
 
   bgSubParams.morph_size = 1;
@@ -112,13 +112,13 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   ////////////////////////////////////
   // Tracking parameters
   CTracker::Params trackerParams;
-  trackerParams.dt = 0.6;
+  trackerParams.dt = 0.2;
   nh.param("dt", trackerParams.dt, trackerParams.dt);
 
   trackerParams.dist_thresh = 60.0;
   nh.param("dist_thresh", trackerParams.dist_thresh, trackerParams.dist_thresh);
 
-  trackerParams.max_allowed_skipped_frames = 1;
+  trackerParams.max_allowed_skipped_frames = 3;
   nh.param("max_allowed_skipped_frames", trackerParams.max_allowed_skipped_frames, trackerParams.max_allowed_skipped_frames);
 
   trackerParams.max_trace_length = 10;
@@ -297,7 +297,7 @@ Point_t CostmapToDynamicObstacles::getEstimatedVelocityOfObject(unsigned int idx
   // vel [px/s] * costmapResolution [m/px] = vel [m/s]
   Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution() + egoVel_;
 
-  ROS_INFO("vel x: %f, vel y: %f, vel z: %f", vel.x, vel.y, vel.z);
+  //ROS_INFO("vel x: %f, vel y: %f, vel z: %f", vel.x, vel.y, vel.z);
   // velocity in /map frame
   return vel;
 }
