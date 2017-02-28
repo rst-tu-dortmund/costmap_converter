@@ -119,9 +119,28 @@ public:
      * @warning The underlying plugin must ensure that this method is thread safe.
      * @return Shared instance of the current polygon container
      */
-    virtual PolygonContainerConstPtr getPolygons(){return PolygonContainerConstPtr();} //TODO: getPolygons() -> getObstacles()
-      
-    virtual ObstacleContainerConstPtr getObstacles(){return ObstacleContainerConstPtr();}
+    virtual PolygonContainerConstPtr getPolygons(){return PolygonContainerConstPtr();}
+
+  /**
+   * @brief Get a shared instance of the current obstacle container
+   * If this method is not overwritten by the underlying plugin, the obstacle container is only filled with polygons.
+   * @remarks If compute() or startWorker() has not been called before, this method returns an empty instance!
+   * @warning The underlying plugin must ensure that this method is thread safe.
+   * @return Shared instance of the current obstacle container
+   * @sa getPolygons
+   */
+    virtual ObstacleContainerConstPtr getObstacles()
+    {
+      ObstacleContainerPtr obstacles (new teb_local_planner::ObstacleMsg);
+      PolygonContainerConstPtr polygons = getPolygons();
+      for (size_t i = 0; i < polygons->size(); i++)
+      {
+        geometry_msgs::PolygonStamped polygonStamped;
+        polygonStamped.polygon = polygons->at(i);
+        obstacles->obstacles.push_back(polygonStamped);
+      }
+      return obstacles;
+    }
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
       * The worker is implemented as a timer event that is invoked at a specific \c rate.
