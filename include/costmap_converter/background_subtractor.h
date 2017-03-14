@@ -10,8 +10,8 @@ public:
     double alpha_slow;
     double alpha_fast;
     double beta;
-    double minOccupancyProbability;
     double minSepBetweenFastAndSlowFilter;
+    double minOccupancyProbability;
     double maxOccupancyNeighbors;
     int morph_size;
   };

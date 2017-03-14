@@ -62,14 +62,15 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   // Blob detection parameters
   BlobDetector::Params blobDetParams;
   // constant parameters, changing these makes no sense
-  blobDetParams.filterByColor = true; // actually filterByIntensity
+  blobDetParams.filterByColor = true; // actually filterByIntensity, always true
   blobDetParams.blobColor = 255;      // Extract light blobs
-
-  blobDetParams.minThreshold = 10;
-  nh.param("min_threshold", blobDetParams.minThreshold, blobDetParams.minThreshold);
-
+  blobDetParams.thresholdStep = 256;  // Input for blobDetection is already a binary image
+  blobDetParams.minThreshold = 127;
   blobDetParams.maxThreshold = 255;
-  nh.param("max_threshold", blobDetParams.maxThreshold, blobDetParams.maxThreshold);
+  blobDetParams.minRepeatability = 1;
+
+  blobDetParams.minDistBetweenBlobs = 10;
+  nh.param("min_distance_between_blobs", blobDetParams.minDistBetweenBlobs, blobDetParams.minDistBetweenBlobs);
 
   blobDetParams.filterByArea = true;
   nh.param("filter_by_area", blobDetParams.filterByArea, blobDetParams.filterByArea);
@@ -324,18 +325,22 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   bgSubParams.alpha_slow = config.alpha_slow;
   bgSubParams.alpha_fast = config.alpha_fast;
   bgSubParams.beta = config.beta;
-  bgSubParams.minOccupancyProbability = config.min_occupancy_probability;
   bgSubParams.minSepBetweenFastAndSlowFilter = config.min_sep_between_slow_and_fast_filter;
+  bgSubParams.minOccupancyProbability = config.min_occupancy_probability;
   bgSubParams.maxOccupancyNeighbors = config.max_occupancy_neighbors;
   bgSubParams.morph_size = config.morph_size;
   bgSub_->updateParameters(bgSubParams);
 
   // BlobDetector Parameters
   BlobDetector::Params blobDetParams;
-  blobDetParams.filterByColor = true; // actually filterByIntensity
+  // necessary, because blobDetParams are otherwise initialized with default values for dark blobs
+  blobDetParams.filterByColor = true; // actually filterByIntensity, always true
   blobDetParams.blobColor = 255;      // Extract light blobs
-  blobDetParams.minThreshold = config.min_threshold;
-  blobDetParams.maxThreshold = config.max_threshold;
+  blobDetParams.thresholdStep = 256;  // Input for blobDetection is already a binary image
+  blobDetParams.minThreshold = 127;
+  blobDetParams.maxThreshold = 255;
+  blobDetParams.minRepeatability = 1;
+  blobDetParams.minDistBetweenBlobs = config.min_distance_between_blobs;
   blobDetParams.filterByArea = config.filter_by_area;
   blobDetParams.minArea = config.min_area;
   blobDetParams.maxArea = config.max_area;
@@ -345,6 +350,9 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   blobDetParams.filterByInertia = config.filter_by_inertia;
   blobDetParams.minInertiaRatio = config.min_inertia_ratio;
   blobDetParams.maxInertiaRatio = config.max_inertia_ratio;
+  blobDetParams.filterByConvexity = config.filter_by_convexity;
+  blobDetParams.minConvexity = config.min_convexity;
+  blobDetParams.maxConvexity = config.max_convexity;
   blobDet_->updateParameters(blobDetParams);
 
   // Tracking Parameters
