@@ -340,7 +340,7 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   blobDetParams.minThreshold = 127;
   blobDetParams.maxThreshold = 255;
   blobDetParams.minRepeatability = 1;
-  blobDetParams.minDistBetweenBlobs = config.min_distance_between_blobs;
+  blobDetParams.minDistBetweenBlobs = config.min_distance_between_blobs; // TODO: Currently not working as expected
   blobDetParams.filterByArea = config.filter_by_area;
   blobDetParams.minArea = config.min_area;
   blobDetParams.maxArea = config.max_area;
