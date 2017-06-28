@@ -75,7 +75,8 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   cv::threshold(nearestNeighborMean_slow, nearestNeighborMean_slow, params.maxOccupancyNeighbors, 255, cv::THRESH_BINARY_INV);
   cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
-  visualize("Current frame", currentFrame_);
+  //visualize("Current frame", currentFrame_);
+  //cv::imwrite("/home/albers/Desktop/currentFrame.png", currentFrame_);
   //  visualize("Foreground mask", fgMask);
 
   currentFrames_vec.push_back(currentFrame_);

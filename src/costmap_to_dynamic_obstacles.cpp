@@ -179,14 +179,16 @@ void CostmapToDynamicObstacles::compute()
   cv::Mat fgMaskWithKeypoints = cv::Mat::zeros(fgMask.size(), CV_8UC3);
   cv::cvtColor(fgMask, fgMaskWithKeypoints, cv::COLOR_GRAY2BGR);
 
-  for (auto p : detectedCenters)
-    cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
+//  for (auto p : detectedCenters)
+//    cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
 
   for (int i = 0; i < tracker_->tracks.size(); i++)
     cv::rectangle(fgMaskWithKeypoints, cv::boundingRect(tracker_->tracks[i]->getLastContour()),
                   cv::Scalar(0, 0, 255), 1);
 
-  visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+  //visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
+  //cv::imwrite("/home/albers/Desktop/fgMask.png", fgMask);
+  //cv::imwrite("/home/albers/Desktop/fgMaskWithKeyPoints.png", fgMaskWithKeypoints);
 
 //  if(!tracker_->tracks.empty())
 //  {
