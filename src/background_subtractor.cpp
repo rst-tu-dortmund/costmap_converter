@@ -76,6 +76,12 @@ void BackgroundSubtractor::apply(cv::Mat image, cv::Mat& fgMask, int shiftX, int
   cv::bitwise_and(nearestNeighborMean_slow, fgMask, fgMask);
 
   //visualize("Current frame", currentFrame_);
+  cv::Mat setBorderToZero = cv::Mat(currentFrame_.size(), CV_8UC1, 0.0);
+  int border = 5;
+  setBorderToZero(cv::Rect(border, border, currentFrame_.cols-2*border, currentFrame_.rows-2*border)) = 255;
+
+  cv::bitwise_and(setBorderToZero, fgMask, fgMask);
+
   //cv::imwrite("/home/albers/Desktop/currentFrame.png", currentFrame_);
   //  visualize("Foreground mask", fgMask);
 
