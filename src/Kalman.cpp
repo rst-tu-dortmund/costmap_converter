@@ -10,12 +10,6 @@ TKalmanFilter::TKalmanFilter(Point_t pt, track_t deltatime)
   // time increment (lower values makes target more "massive")
   dt = deltatime;
 
-  // We don't know acceleration, so, assume it to process noise.
-  // But we can guess, the range of acceleration values thich can be achieved by tracked object.
-  // Process noise. (standard deviation of acceleration: m/s^2)
-  // shows, woh much target can accelerate.
-  // track_t Accel_noise_mag = 0.5;
-
   // 6 state variables [x y z xdot ydot zdot], 3 measurements [x y z]
   kalman = new cv::KalmanFilter(6, 3, 0);
   // Transition cv::Matrix
@@ -46,18 +40,19 @@ TKalmanFilter::TKalmanFilter(Point_t pt, track_t deltatime)
                                0, 1, 0, 0, 0, 0,
                                0, 0, 1, 0, 0, 0);
 
-  //	kalman->processNoiseCov = (cv::Mat_<track_t>(4, 4) <<
-  //    pow(dt,4.0)/4.0	,0						,pow(dt,3.0)/2.0		,0,
-  //    0						,pow(dt,4.0)/4.0	,0
-  //    ,pow(dt,3.0)/2.0,
-  //    pow(dt,3.0)/2.0	,0						,pow(dt,2.0)			,0,
-  //    0						,pow(dt,3.0)/2.0	,0
-  //    ,pow(dt,2.0));
-  // 	kalman->processNoiseCov*=Accel_noise_mag;
+  float sigma = 0.5; // Assume standard deviation for acceleration, todo: dynamic reconfigure
+  float c1 = pow(dt,4.0)/4.0;
+  float c2 = pow(dt,2.0);
+  float c3 = pow(dt,3.0)/2.0;
+  kalman->processNoiseCov = sigma*sigma*(cv::Mat_<float>(6, 6) <<
+                             c1,  0,  0, c3,  0,  0,
+                              0, c1,  0,  0, c3,  0,
+                              0,  0, c1,  0,  0, c3,
+                             c3,  0,  0, c2,  0,  0,
+                              0, c3,  0,  0, c2,  0,
+                              0,  0, c3,  0,  0, c2);
 
-  cv::setIdentity(kalman->processNoiseCov, cv::Scalar::all(1e-1));
-
-  cv::setIdentity(kalman->measurementNoiseCov, cv::Scalar::all(1e-6));
+  cv::setIdentity(kalman->measurementNoiseCov, cv::Scalar::all(5e-2));
 
   cv::setIdentity(kalman->errorCovPost, cv::Scalar::all(1000000));
 }
