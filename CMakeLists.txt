@@ -32,7 +32,6 @@ find_package(OpenCV REQUIRED)
 # catkin_python_setup()
 
 
-
 ################################################
 ## Declare ROS messages, services and actions ##
 ################################################
@@ -129,39 +128,35 @@ include_directories(
 )
 
 ## Declare a cpp library
-add_library(costmap_converter 	src/costmap_to_polygons.cpp 
-				src/costmap_to_polygons_concave.cpp
-				src/costmap_to_lines_convex_hull.cpp
-				src/costmap_to_lines_ransac.cpp
-				src/costmap_to_dynamic_obstacles/costmap_to_dynamic_obstacles.cpp
-				src/costmap_to_dynamic_obstacles/background_subtractor.cpp
-				src/costmap_to_dynamic_obstacles/blob_detector.cpp
-				src/costmap_to_dynamic_obstacles/Ctracker.cpp
-				src/costmap_to_dynamic_obstacles/Kalman.cpp
-				src/costmap_to_dynamic_obstacles/HungarianAlg.cpp)
+add_library(costmap_converter   src/costmap_to_polygons.cpp 
+                                src/costmap_to_polygons_concave.cpp
+                                src/costmap_to_lines_convex_hull.cpp
+                                src/costmap_to_lines_ransac.cpp
+                                src/costmap_to_dynamic_obstacles/costmap_to_dynamic_obstacles.cpp
+                                src/costmap_to_dynamic_obstacles/background_subtractor.cpp
+                                src/costmap_to_dynamic_obstacles/blob_detector.cpp
+                                src/costmap_to_dynamic_obstacles/Ctracker.cpp
+                                src/costmap_to_dynamic_obstacles/Kalman.cpp
+                                src/costmap_to_dynamic_obstacles/HungarianAlg.cpp
+)
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
-
-## Declare a cpp executable
-add_executable(standalone_converter src/costmap_converter_node.cpp)
-target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
-  
-# Necessary for the use of openCV visual debug (cvv)
 target_compile_features(costmap_converter PRIVATE cxx_nullptr)
-# (un)set: cmake -DCVV_DEBUG_MODE=OFF ..
-OPTION(CVV_DEBUG_MODE "cvvisual-debug-mode" ON)
-if(CVV_DEBUG_MODE MATCHES ON)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCVVISUAL_DEBUGMODE")
-endif()
-
-# Dynamic reconfigure: make sure configure headers are built before any node using them
-add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
 
 # Dynamic reconfigure: make sure configure headers are built before any node using them
 add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
 # Generate messages before compiling the lib
 add_dependencies(costmap_converter ${PROJECT_NAME}_generate_messages_cpp)
 
-## Specify libraries to link a library or executable target against
+## Declare a cpp executable
+add_executable(standalone_converter src/costmap_converter_node.cpp)
+target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
+add_dependencies(standalone_converter costmap_converter)
+  
+# (un)set: cmake -DCVV_DEBUG_MODE=OFF ..
+option(CVV_DEBUG_MODE "cvvisual-debug-mode" ON)
+if(CVV_DEBUG_MODE MATCHES ON)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCVVISUAL_DEBUGMODE")
+endif()
 
 
 
