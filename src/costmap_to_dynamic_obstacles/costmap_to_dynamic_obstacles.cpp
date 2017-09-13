@@ -1,4 +1,4 @@
-#include "costmap_converter/costmap_to_dynamic_obstacles.h"
+#include <costmap_converter/costmap_to_dynamic_obstacles/costmap_to_dynamic_obstacles.h>
 
 #include <pluginlib/class_list_macros.h>
 #include <tf/tf.h>
@@ -198,7 +198,7 @@ void CostmapToDynamicObstacles::compute()
 
 
   //////////////////////////// ObstacleContainerPtr füllen /////////////////////////////
-  ObstacleContainerPtr obstacles (new teb_local_planner::ObstacleMsg);
+  ObstacleContainerPtr obstacles (new ObstacleMsg);
   // header.seq is automatically filled
   obstacles->header.stamp = ros::Time::now();
   obstacles->header.frame_id = "/map"; //Global frame /map

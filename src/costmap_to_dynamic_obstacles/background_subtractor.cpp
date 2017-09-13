@@ -1,6 +1,6 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/cvv.hpp>
-#include "costmap_converter/background_subtractor.h"
+#include <costmap_converter/costmap_to_dynamic_obstacles/background_subtractor.h>
 
 BackgroundSubtractor::BackgroundSubtractor(const Params &parameters): params(parameters)
 {

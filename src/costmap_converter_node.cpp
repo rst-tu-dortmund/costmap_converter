@@ -70,7 +70,7 @@ public:
       ROS_INFO_STREAM(converter_plugin << " loaded.");
       
       costmap_sub_ = n_.subscribe("/robot_0/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
-      obstacle_pub_ = n_.advertise<teb_local_planner::ObstacleMsg>("/costmap_obstacles", 1000);
+      obstacle_pub_ = n_.advertise<costmap_converter::ObstacleMsg>("/costmap_obstacles", 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
       
       frame_id_ = "/map";

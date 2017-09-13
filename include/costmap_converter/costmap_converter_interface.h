@@ -46,15 +46,15 @@
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/Polygon.h>
-#include <teb_local_planner/ObstacleMsg.h>
+#include <costmap_converter/ObstacleMsg.h>
 
 
 namespace costmap_converter
 {
 //! Typedef for a shared dynamic obstacle container
-typedef boost::shared_ptr< teb_local_planner::ObstacleMsg> ObstacleContainerPtr;
+typedef boost::shared_ptr<ObstacleMsg> ObstacleContainerPtr;
 //! Typedef for a shared dynamic obstacle container (read-only access)
-typedef boost::shared_ptr< const teb_local_planner::ObstacleMsg > ObstacleContainerConstPtr;
+typedef boost::shared_ptr< const ObstacleMsg > ObstacleContainerConstPtr;
 
 //! Typedef for a shared polygon container 
 typedef boost::shared_ptr< std::vector<geometry_msgs::Polygon> > PolygonContainerPtr;
@@ -131,7 +131,7 @@ public:
    */
     virtual ObstacleContainerConstPtr getObstacles()
     {
-      ObstacleContainerPtr obstacles (new teb_local_planner::ObstacleMsg);
+      ObstacleContainerPtr obstacles (new ObstacleMsg);
       PolygonContainerConstPtr polygons = getPolygons();
       for (size_t i = 0; i < polygons->size(); i++)
       {

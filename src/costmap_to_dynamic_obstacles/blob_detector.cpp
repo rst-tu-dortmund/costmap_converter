@@ -1,4 +1,4 @@
-#include "costmap_converter/blob_detector.h"
+#include <costmap_converter/costmap_to_dynamic_obstacles/blob_detector.h>
 #include <opencv2/imgproc.hpp>
 
 static std::vector<std::vector<cv::Point>> _contours;

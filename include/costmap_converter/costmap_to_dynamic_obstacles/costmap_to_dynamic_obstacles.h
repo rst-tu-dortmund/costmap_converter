@@ -16,9 +16,9 @@
 #include <costmap_converter/CostmapToDynamicObstaclesConfig.h>
 
 // Own includes
-#include "background_subtractor.h"
-#include "blob_detector.h"
-#include "Ctracker.h"
+#include <costmap_converter/costmap_to_dynamic_obstacles/background_subtractor.h>
+#include <costmap_converter/costmap_to_dynamic_obstacles/blob_detector.h>
+#include <costmap_converter/costmap_to_dynamic_obstacles/Ctracker.h>
 
 namespace costmap_converter
 {
