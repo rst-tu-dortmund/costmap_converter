@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   roscpp
   std_msgs
+  message_generation
   costmap_2d
   dynamic_reconfigure
   pluginlib
@@ -57,11 +58,10 @@ find_package(OpenCV REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  ObstacleMsg.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -78,10 +78,10 @@ find_package(OpenCV REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   std_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   geometry_msgs std_msgs
+)
 
 #add dynamic reconfigure api
 #find_package(catkin REQUIRED dynamic_reconfigure)
@@ -109,7 +109,8 @@ catkin_package(
     geometry_msgs
     pluginlib
     roscpp 
-    std_msgs 
+    std_msgs
+    message_runtime 
     dynamic_reconfigure
     costmap_2d
   #DEPENDS 
@@ -155,9 +156,10 @@ endif()
 # Dynamic reconfigure: make sure configure headers are built before any node using them
 add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
 
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(drawing_node drawing_generate_messages_cpp)
+# Dynamic reconfigure: make sure configure headers are built before any node using them
+add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
+# Generate messages before compiling the lib
+add_dependencies(costmap_converter ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 
