@@ -11,14 +11,14 @@ namespace costmap_converter
 {
 CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
 {
-  egoVel_.x = egoVel_.y = egoVel_.z = 0;
+  ego_vel_.x = ego_vel_.y = ego_vel_.z = 0;
   costmap_ = NULL;
   dynamic_recfg_ = NULL;
 }
 
 CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
 {
-  delete bgSub_;
+  delete bg_sub_;
   delete tracker_;
 
   if(dynamic_recfg_ != NULL)
@@ -29,7 +29,7 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 {
   costmap_ = NULL;
 
-  odomSub_ = nh.subscribe("/robot_0/odom", 1, &CostmapToDynamicObstacles::odomCallback, this);
+  odom_sub_ = nh.subscribe("/robot_0/odom", 1, &CostmapToDynamicObstacles::odomCallback, this);
 
   //////////////////////////////////
   // Foreground detection parameters
@@ -56,7 +56,7 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   bgSubParams.morph_size = 1;
   nh.param("morph_size", bgSubParams.morph_size, bgSubParams.morph_size);
 
-  bgSub_ = new BackgroundSubtractor(bgSubParams);
+  bg_sub_ = new BackgroundSubtractor(bgSubParams);
 
   ////////////////////////////
   // Blob detection parameters
@@ -108,7 +108,7 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   blobDetParams.maxConvexity = 1;          // maximal 1
   nh.param("max_convexity", blobDetParams.maxConvexity, blobDetParams.maxConvexity);
 
-  blobDet_ = BlobDetector::create(blobDetParams);
+  blob_det_ = BlobDetector::create(blobDetParams);
 
   ////////////////////////////////////
   // Tracking parameters
@@ -135,30 +135,30 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 
 void CostmapToDynamicObstacles::compute()
 {
-  if (costmapMat_.empty())
+  if (costmap_mat_.empty())
     return;
 
   /////////////////////////// Foreground detection ////////////////////////////////////
   // Dynamic obstacles are separated from static obstacles
-  int originX = round(costmap_->getOriginX() / costmap_->getResolution());
-  int originY = round(costmap_->getOriginY() / costmap_->getResolution());
+  int origin_x = round(costmap_->getOriginX() / costmap_->getResolution());
+  int origin_y = round(costmap_->getOriginY() / costmap_->getResolution());
   // ROS_INFO("Origin x  [m]: %f    Origin_y  [m]: %f", costmap_->getOriginX(), costmap_->getOriginY());
   // ROS_INFO("Origin x [px]: %d \t Origin_y [px]: %d", originX, originY);
 
-  bgSub_->apply(costmapMat_, fgMask_, originX, originY);
+  bg_sub_->apply(costmap_mat_, fg_mask_, origin_x, origin_y);
 
   // if no foreground object is detected, no ObstacleMsgs need to be published
-  if (fgMask_.empty())
+  if (fg_mask_.empty())
     return;
 
 
   /////////////////////////////// Blob detection /////////////////////////////////////
   // Centers and contours of Blobs are detected
   // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
-  cv::Mat fgMask = fgMask_.clone();
+  cv::Mat fgMask = fg_mask_.clone();
 
-  blobDet_->detect(fgMask, keypoints_);
-  std::vector<std::vector<cv::Point>> contours = blobDet_->getContours();
+  blob_det_->detect(fgMask, keypoints_);
+  std::vector<std::vector<cv::Point>> contours = blob_det_->getContours();
 
 
   ////////////////////////////// Tracking ////////////////////////////////////////////
@@ -197,44 +197,42 @@ void CostmapToDynamicObstacles::compute()
 //  }
 
 
-  //////////////////////////// ObstacleContainerPtr füllen /////////////////////////////
+  //////////////////////////// Fill ObstacleContainerPtr /////////////////////////////
   ObstacleContainerPtr obstacles (new ObstacleMsg);
   // header.seq is automatically filled
   obstacles->header.stamp = ros::Time::now();
   obstacles->header.frame_id = "/map"; //Global frame /map
 
   // For all tracked objects
-  for (unsigned int i = 0; i < tracker_->tracks.size(); i++)
+  for (unsigned int i = 0; i < (unsigned int)tracker_->tracks.size(); ++i)
   {
-    geometry_msgs::PolygonStamped polygonStamped;
-    // TODO: Header?
-//    polygonStamped.header.stamp = ros::Time::now();
-//    polygonStamped.header.frame_id = "/map"; // Global frame /map
+    geometry_msgs::PolygonStamped polygon;
 
-    // Append each polygon point
-    for (unsigned int j = 0; j < getContour(i).size(); j++)
+    std::vector<Point_t> contour;
+    getContour(i, contour);
+
+    // convert contour to polygon
+    for (const Point_t& pt : contour)
     {
-      polygonStamped.polygon.points.push_back(geometry_msgs::Point32());
-      polygonStamped.polygon.points.at(j).x = getContour(i).at(j).x;
-      polygonStamped.polygon.points.at(j).y = getContour(i).at(j).y;
-      polygonStamped.polygon.points.at(j).z = 0;
+      polygon.polygon.points.emplace_back();
+      polygon.polygon.points.back().x = pt.x;
+      polygon.polygon.points.back().y = pt.y;
+      polygon.polygon.points.back().z = 0;
     }
 
-    obstacles->obstacles.push_back(polygonStamped);
+    obstacles->obstacles.push_back(polygon);
 
     // Set obstacle ID
     obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
 
     // Set orientation
-    geometry_msgs::QuaternionStamped orientationStamped;
-//  TODO: Header?
-//    orientationStamped.header.stamp = ros::Time::now();
-//    orientationStamped.header.frame_id = "/map"; //Global frame /map
+    geometry_msgs::QuaternionStamped orientation;
+
     Point_t vel = getEstimatedVelocityOfObject(i);
     double yaw = std::atan2(vel.y, vel.x);
     //ROS_INFO("yaw: %f", yaw);
-    orientationStamped.quaternion = tf::createQuaternionMsgFromYaw(yaw);
-    obstacles->orientations.push_back(orientationStamped);
+    orientation.quaternion = tf::createQuaternionMsgFromYaw(yaw);
+    obstacles->orientations.push_back(orientation);
 
     // Set velocity
     geometry_msgs::TwistWithCovariance velocities;
@@ -279,7 +277,7 @@ void CostmapToDynamicObstacles::updateCostmap2D()
   costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
 
   // Initialize costmapMat_ directly with the unsigned char array of costmap_
-  costmapMat_ = cv::Mat(costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY(), CV_8UC1,
+  costmap_mat_ = cv::Mat(costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY(), CV_8UC1,
                         costmap_->getCharMap()).clone(); // Erstmal sicherer
 }
 
@@ -298,7 +296,7 @@ void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleContainerPtr obs
 Point_t CostmapToDynamicObstacles::getEstimatedVelocityOfObject(unsigned int idx)
 {
   // vel [px/s] * costmapResolution [m/px] = vel [m/s]
-  Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution() + egoVel_;
+  Point_t vel = tracker_->tracks.at(idx)->getEstimatedVelocity() * costmap_->getResolution() + ego_vel_;
 
   //ROS_INFO("vel x: %f, vel y: %f, vel z: %f", vel.x, vel.y, vel.z);
   // velocity in /map frame
@@ -315,9 +313,9 @@ void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr&
 
   // velocity of the robot in x, y and z coordinates
   tf::Vector3 vel = tf::quatRotate(pose, twistLinear);
-  egoVel_.x = vel.x();
-  egoVel_.y = vel.y();
-  egoVel_.z = vel.z();
+  ego_vel_.x = vel.x();
+  ego_vel_.y = vel.y();
+  ego_vel_.z = vel.z();
 }
 
 void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &config, uint32_t level)
@@ -331,7 +329,7 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   bgSubParams.minOccupancyProbability = config.min_occupancy_probability;
   bgSubParams.maxOccupancyNeighbors = config.max_occupancy_neighbors;
   bgSubParams.morph_size = config.morph_size;
-  bgSub_->updateParameters(bgSubParams);
+  bg_sub_->updateParameters(bgSubParams);
 
   // BlobDetector Parameters
   BlobDetector::Params blobDetParams;
@@ -355,7 +353,7 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   blobDetParams.filterByConvexity = config.filter_by_convexity;
   blobDetParams.minConvexity = config.min_convexity;
   blobDetParams.maxConvexity = config.max_convexity;
-  blobDet_->updateParameters(blobDetParams);
+  blob_det_->updateParameters(blobDetParams);
 
   // Tracking Parameters
   CTracker::Params trackingParams;
@@ -366,27 +364,28 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   tracker_->updateParameters(trackingParams);
 }
 
-std::vector<Point_t> CostmapToDynamicObstacles::getContour(unsigned int idx)
+void CostmapToDynamicObstacles::getContour(unsigned int idx, std::vector<Point_t>& contour)
 {
   assert(!tracker_->tracks.empty() && idx < tracker_->tracks.size());
 
+  contour.clear();
+
   // contour [px] * costmapResolution [m/px] = contour [m]
   std::vector<cv::Point> contour2i = tracker_->tracks.at(idx)->getLastContour();
-  std::vector<Point_t> contour3f;
-  contour3f.reserve(contour2i.size());
+
+  contour.reserve(contour2i.size());
 
   Point_t costmapOrigin(costmap_->getOriginX(), costmap_->getOriginY(), 0);
 
-  for (int i = 0; i < contour2i.size(); i++)
+  for (std::size_t i = 0; i < contour2i.size(); ++i)
   {
-    contour3f.push_back((Point_t(contour2i.at(i).x, contour2i.at(i).y, 0.0)*costmap_->getResolution())
+    contour.push_back((Point_t(contour2i.at(i).x, contour2i.at(i).y, 0.0)*costmap_->getResolution())
                         + costmapOrigin); // Shift to /map
   }
 
-  return contour3f;
 }
 
-void CostmapToDynamicObstacles::visualize(std::string name, cv::Mat image)
+void CostmapToDynamicObstacles::visualize(const std::string& name, const cv::Mat& image)
 {
   if (!image.empty())
   {
