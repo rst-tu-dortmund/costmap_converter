@@ -62,6 +62,9 @@
 #include <costmap_converter/costmap_to_dynamic_obstacles/background_subtractor.h>
 #include <costmap_converter/costmap_to_dynamic_obstacles/blob_detector.h>
 
+// STL
+#include <memory>
+
 namespace costmap_converter {
 
 /**
@@ -155,10 +158,10 @@ private:
   cv::Mat costmap_mat_;
   ObstacleContainerPtr obstacles_;
   cv::Mat fg_mask_;
-  BackgroundSubtractor* bg_sub_;
+  std::unique_ptr<BackgroundSubtractor> bg_sub_;
   cv::Ptr<BlobDetector> blob_det_;
   std::vector<cv::KeyPoint> keypoints_;
-  CTracker* tracker_;
+  std::unique_ptr<CTracker> tracker_;
   ros::Subscriber odom_sub_;
   Point_t ego_vel_;
 
