@@ -69,9 +69,18 @@ public:
       
       ROS_INFO_STREAM(converter_plugin << " loaded.");
       
-      costmap_sub_ = n_.subscribe("/robot_0/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
-      obstacle_pub_ = n_.advertise<costmap_converter::ObstacleMsg>("/costmap_obstacles", 1000);
-      marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
+      std::string costmap_topic = "/move_base/local_costmap/costmap";
+      n_.param("costmap_topic", costmap_topic, costmap_topic);
+
+      std::string obstacles_topic = "/costmap_obstacles";
+      n_.param("obstacles_topic", obstacles_topic, obstacles_topic);
+
+      std::string polygon_marker_topic = "costmap_polygon_markers";
+      n_.param("polygon_marker_topic", polygon_marker_topic, polygon_marker_topic);
+
+      costmap_sub_ = n_.subscribe(costmap_topic, 1, &CostmapStandaloneConversion::costmapCallback, this);
+      obstacle_pub_ = n_.advertise<costmap_converter::ObstacleMsg>(obstacles_topic, 1000);
+      marker_pub_ = n_.advertise<visualization_msgs::Marker>(polygon_marker_topic, 10);
       
       frame_id_ = "/map";
       n_.param("frame_id", frame_id_, frame_id_);

@@ -11,21 +11,25 @@ namespace costmap_converter
 CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
 {
   ego_vel_.x = ego_vel_.y = ego_vel_.z = 0;
-  costmap_ = NULL;
-  dynamic_recfg_ = NULL;
+  costmap_ = nullptr;
+  dynamic_recfg_ = nullptr;
 }
 
 CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
 {
-  if(dynamic_recfg_ != NULL)
+  if(dynamic_recfg_ != nullptr)
     delete dynamic_recfg_;
 }
 
 void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 {
-  costmap_ = NULL;
+  costmap_ = nullptr;
 
-  odom_sub_ = nh.subscribe("/robot_0/odom", 1, &CostmapToDynamicObstacles::odomCallback, this);
+  // We need the odometry from the robot to compensate the ego motion
+  std::string odom_topic = "/odom";
+  nh.param("odom_topic", odom_topic, odom_topic);
+
+  odom_sub_ = nh.subscribe(odom_topic, 1, &CostmapToDynamicObstacles::odomCallback, this);
 
   //////////////////////////////////
   // Foreground detection parameters
@@ -57,10 +61,10 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   ////////////////////////////
   // Blob detection parameters
   BlobDetector::Params blob_det_params;
-  // constant parameters, changing these makes no sense
+
   blob_det_params.filterByColor = true; // actually filterByIntensity, always true
   blob_det_params.blobColor = 255;      // Extract light blobs
-  blob_det_params.thresholdStep = 256;  // Input for blobDetection is already a binary image
+  blob_det_params.thresholdStep = 256;  // Input for blob detection is already a binary image
   blob_det_params.minThreshold = 127;
   blob_det_params.maxThreshold = 255;
   blob_det_params.minRepeatability = 1;
