@@ -1,4 +1,7 @@
-#include <costmap_converter/costmap_to_dynamic_obstacles/Ctracker.h>
+// Based on https://github.com/Smorodov/Multitarget-tracker/tree/master/Tracker, GPLv3
+// Refer to README.md in this directory.
+
+#include <costmap_converter/costmap_to_dynamic_obstacles/multitarget_tracker/Ctracker.h>
 
 // ---------------------------------------------------------------------------
 // Tracker. Manage tracks. Create, remove, update.

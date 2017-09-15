@@ -135,9 +135,9 @@ add_library(costmap_converter   src/costmap_to_polygons.cpp
                                 src/costmap_to_dynamic_obstacles/costmap_to_dynamic_obstacles.cpp
                                 src/costmap_to_dynamic_obstacles/background_subtractor.cpp
                                 src/costmap_to_dynamic_obstacles/blob_detector.cpp
-                                src/costmap_to_dynamic_obstacles/Ctracker.cpp
-                                src/costmap_to_dynamic_obstacles/Kalman.cpp
-                                src/costmap_to_dynamic_obstacles/HungarianAlg.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/Ctracker.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/Kalman.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/HungarianAlg.cpp
 )
 target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
 target_compile_features(costmap_converter PRIVATE cxx_nullptr)

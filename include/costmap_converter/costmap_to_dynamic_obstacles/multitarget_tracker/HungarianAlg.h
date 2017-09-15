@@ -1,4 +1,5 @@
-// nach https://github.com/Smorodov/Multitarget-tracker/tree/master/Tracker, GPLv3
+// Based on https://github.com/Smorodov/Multitarget-tracker/tree/master/Tracker, GPLv3
+// Refer to README.md in this directory.
 
 #include <vector>
 #include <iostream>

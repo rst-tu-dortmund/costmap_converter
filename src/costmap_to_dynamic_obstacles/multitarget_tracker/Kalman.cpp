@@ -1,4 +1,7 @@
-#include <costmap_converter/costmap_to_dynamic_obstacles/Kalman.h>
+// Based on https://github.com/Smorodov/Multitarget-tracker/tree/master/Tracker, GPLv3
+// Refer to README.md in this directory.
+
+#include <costmap_converter/costmap_to_dynamic_obstacles/multitarget_tracker/Kalman.h>
 #include "opencv2/opencv.hpp"
 #include <iostream>
 #include <vector>

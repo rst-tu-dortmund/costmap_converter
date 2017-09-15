@@ -58,7 +58,7 @@
 #include <dynamic_reconfigure/server.h>
 
 // Own includes
-#include <costmap_converter/costmap_to_dynamic_obstacles/Ctracker.h>
+#include <costmap_converter/costmap_to_dynamic_obstacles/multitarget_tracker/Ctracker.h>
 #include <costmap_converter/costmap_to_dynamic_obstacles/background_subtractor.h>
 #include <costmap_converter/costmap_to_dynamic_obstacles/blob_detector.h>
 
