@@ -182,6 +182,7 @@ private:
   Point_t ego_vel_;
 
   std::string odom_topic_ = "/odom";
+  bool publish_static_obstacles_ = true;
 
   dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>*
       dynamic_recfg_; //!< Dynamic reconfigure server to allow config

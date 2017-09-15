@@ -26,7 +26,10 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   costmap_ = nullptr;
 
   // We need the odometry from the robot to compensate the ego motion
-  odom_sub_ = nh.subscribe(odom_topic_, 1, &CostmapToDynamicObstacles::odomCallback, this);
+  ros::NodeHandle gn; // create odom topic w.r.t. global node handle
+  odom_sub_ = gn.subscribe(odom_topic_, 1, &CostmapToDynamicObstacles::odomCallback, this);
+
+  nh.param("publish_static_obstacles", publish_static_obstacles_, publish_static_obstacles_);
 
   //////////////////////////////////
   // Foreground detection parameters
@@ -244,40 +247,36 @@ void CostmapToDynamicObstacles::compute()
   }
 
   ////////////////////////// Static obstacles ////////////////////////////
-
-  // Get static obstacles
-  cv::Mat bg_mat = costmap_mat_ - fg_mask_;
-
-  // efficient cv::Mat element access:
-  int n_rows = bg_mat.rows;
-  int n_cols = bg_mat.cols;// * bg_mat.channels();
-
-  // accept only char type matrices
-  CV_Assert(bg_mat.depth() == CV_8U);
-
-  if (bg_mat.isContinuous())
+  if (publish_static_obstacles_)
   {
-    n_cols *= n_rows;
-    n_rows = 1;
-  }
+    // Get static obstacles
+    cv::Mat bg_mat = costmap_mat_ - fg_mask_;
 
-  uchar* p;
-  for(int i = 0; i < n_rows; ++i)
-  {
-    p = bg_mat.ptr<uchar>(i);
-    for (int j = 0; j < n_cols; ++j)
+    //visualize("bg", bg_mat);
+
+    uchar* img_data = bg_mat.data;
+    int width = bg_mat.cols;
+    int height = bg_mat.rows;
+    int stride = bg_mat.step;
+
+    for(int i = 0; i < height; i++)
     {
-       if (p[j] > 0)
-       {
-         // obstacle found
-         obstacles->obstacles.emplace_back();
-         geometry_msgs::Point32 pt;
-         pt.x = i;
-         pt.y = j;
-         obstacles->obstacles.back().polygon.points.push_back(pt);
-
-         obstacles->obstacles.back().id = -1;
-       }
+      for(int j = 0; j < width; j++)
+      {
+          uchar value = img_data[i * stride + j];
+          if (value > 0)
+          {
+            // obstacle found
+            obstacles->obstacles.emplace_back();
+            geometry_msgs::Point32 pt;
+            pt.x = i;
+            pt.y = j;
+            obstacles->obstacles.back().polygon.points.push_back(pt);
+            obstacles->obstacles.back().velocities.twist.linear.x = 0;
+            obstacles->obstacles.back().velocities.twist.linear.y = 0;
+            obstacles->obstacles.back().id = -1;
+          }
+      }
     }
   }
 
@@ -332,6 +331,8 @@ Point_t CostmapToDynamicObstacles::getEstimatedVelocityOfObject(unsigned int idx
 
 void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
+  ROS_INFO_ONCE("CostmapToDynamicObstacles: odom received.");
+
   tf::Quaternion pose;
   tf::quaternionMsgToTF(msg->pose.pose.orientation, pose);
 
@@ -345,8 +346,10 @@ void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr&
   ego_vel_.z = vel.z();
 }
 
-void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &config, uint32_t level)
+void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig& config, uint32_t level)
 {
+  publish_static_obstacles_ = config.publish_static_obstacles;
+
   // BackgroundSubtraction Parameters
   BackgroundSubtractor::Params bg_sub_params;
   bg_sub_params.alpha_slow = config.alpha_slow;
