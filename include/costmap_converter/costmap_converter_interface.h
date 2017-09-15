@@ -115,6 +115,9 @@ public:
     
     /**
      * @brief Get a shared instance of the current polygon container
+     *
+     * If this method is not implemented by any subclass (plugin) the returned shared
+     * pointer is empty.
      * @remarks If compute() or startWorker() has not been called before, this method returns an empty instance!
      * @warning The underlying plugin must ensure that this method is thread safe.
      * @return Shared instance of the current polygon container
@@ -123,7 +126,7 @@ public:
 
   /**
    * @brief Get a shared instance of the current obstacle container
-   * If this method is not overwritten by the underlying plugin, the obstacle container is only filled with polygons.
+   * If this method is not overwritten by the underlying plugin, the obstacle container just imports getPolygons().
    * @remarks If compute() or startWorker() has not been called before, this method returns an empty instance!
    * @warning The underlying plugin must ensure that this method is thread safe.
    * @return Shared instance of the current obstacle container
@@ -131,16 +134,19 @@ public:
    */
     virtual ObstacleContainerConstPtr getObstacles()
     {
-      ObstacleContainerPtr obstacles (new ObstacleMsg);
+      ObstacleContainerPtr obstacles = boost::make_shared<ObstacleMsg>();
       PolygonContainerConstPtr polygons = getPolygons();
-      for (size_t i = 0; i < polygons->size(); i++)
+      if (polygons)
       {
-        geometry_msgs::PolygonStamped polygonStamped;
-        polygonStamped.polygon = polygons->at(i);
-        obstacles->obstacles.push_back(polygonStamped);
+        for (const geometry_msgs::Polygon& polygon : *polygons)
+        {
+          obstacles->obstacles.emplace_back();
+          obstacles->obstacles.back().polygon = polygon;
+        }
       }
       return obstacles;
     }
+
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
       * The worker is implemented as a timer event that is invoked at a specific \c rate.

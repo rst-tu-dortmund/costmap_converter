@@ -31,6 +31,8 @@ find_package(OpenCV REQUIRED)
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
 
+set (CMAKE_CXX_STANDARD 11)
+
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -139,10 +141,10 @@ add_library(costmap_converter   src/costmap_to_polygons.cpp
                                 src/costmap_to_dynamic_obstacles/multitarget_tracker/Kalman.cpp
                                 src/costmap_to_dynamic_obstacles/multitarget_tracker/HungarianAlg.cpp
 )
-target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
-target_compile_features(costmap_converter PRIVATE cxx_nullptr)
+target_link_libraries(costmap_converter ${catkin_LIBRARIES})
+# target_compile_features(costmap_converter PUBLIC cxx_nullptr cxx_range_for)
 
-# Dynamic reconfigure: make sure configure headers are built before any node using them
+# Dynamic reconfigure: make sure configure headers raare built before any node using them
 add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
 # Generate messages before compiling the lib
 add_dependencies(costmap_converter ${PROJECT_NAME}_generate_messages_cpp)
