@@ -71,7 +71,6 @@ namespace costmap_converter {
  * @class CostmapToDynamicObstacles
  * @brief This class converts the costmap_2d into dynamic obstacles.
  */
-
 class CostmapToDynamicObstacles : public BaseCostmapToPolygons
 {
 public:

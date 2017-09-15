@@ -44,14 +44,14 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   bg_sub_params.beta = 0.85;
   nh.param("beta", bg_sub_params.beta, bg_sub_params.beta);
 
-  bg_sub_params.minOccupancyProbability = 180;
-  nh.param("min_occupancy_probability", bg_sub_params.minOccupancyProbability, bg_sub_params.minOccupancyProbability);
+  bg_sub_params.min_occupancy_probability = 180;
+  nh.param("min_occupancy_probability", bg_sub_params.min_occupancy_probability, bg_sub_params.min_occupancy_probability);
 
-  bg_sub_params.minSepBetweenFastAndSlowFilter = 80;
-  nh.param("min_sep_between_slow_and_fast_filter", bg_sub_params.minSepBetweenFastAndSlowFilter, bg_sub_params.minSepBetweenFastAndSlowFilter);
+  bg_sub_params.min_sep_between_fast_and_slow_filter = 80;
+  nh.param("min_sep_between_slow_and_fast_filter", bg_sub_params.min_sep_between_fast_and_slow_filter, bg_sub_params.min_sep_between_fast_and_slow_filter);
 
-  bg_sub_params.maxOccupancyNeighbors = 100;
-  nh.param("max_occupancy_neighbors", bg_sub_params.maxOccupancyNeighbors, bg_sub_params.maxOccupancyNeighbors);
+  bg_sub_params.max_occupancy_neighbors = 100;
+  nh.param("max_occupancy_neighbors", bg_sub_params.max_occupancy_neighbors, bg_sub_params.max_occupancy_neighbors);
 
   bg_sub_params.morph_size = 1;
   nh.param("morph_size", bg_sub_params.morph_size, bg_sub_params.morph_size);
@@ -325,9 +325,9 @@ void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig &c
   bg_sub_params.alpha_slow = config.alpha_slow;
   bg_sub_params.alpha_fast = config.alpha_fast;
   bg_sub_params.beta = config.beta;
-  bg_sub_params.minSepBetweenFastAndSlowFilter = config.min_sep_between_slow_and_fast_filter;
-  bg_sub_params.minOccupancyProbability = config.min_occupancy_probability;
-  bg_sub_params.maxOccupancyNeighbors = config.max_occupancy_neighbors;
+  bg_sub_params.min_sep_between_fast_and_slow_filter = config.min_sep_between_slow_and_fast_filter;
+  bg_sub_params.min_occupancy_probability = config.min_occupancy_probability;
+  bg_sub_params.max_occupancy_neighbors = config.max_occupancy_neighbors;
   bg_sub_params.morph_size = config.morph_size;
   bg_sub_->updateParameters(bg_sub_params);
 
