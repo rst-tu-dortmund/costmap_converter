@@ -151,13 +151,18 @@ void CostmapToDynamicObstacles::compute()
   if (fg_mask_.empty())
     return;
 
+  cv::Mat bg_mat;
+  if (publish_static_obstacles_)
+  {
+    // Get static obstacles
+    bg_mat = costmap_mat_ - fg_mask_;
+    // visualize("bg_mat", bg_mat);
+  }
+
 
   /////////////////////////////// Blob detection /////////////////////////////////////
   // Centers and contours of Blobs are detected
-  // fgMask is modified, therefore clone fgMask_.. Wirklich notwendig?
-  cv::Mat fg_mask = fg_mask_.clone();
-
-  blob_det_->detect(fg_mask, keypoints_);
+  blob_det_->detect(fg_mask_, keypoints_);
   std::vector<std::vector<cv::Point>> contours = blob_det_->getContours();
 
 
@@ -200,8 +205,9 @@ void CostmapToDynamicObstacles::compute()
   {
     geometry_msgs::Polygon polygon;
 
+    // TODO directly create polygon inside getContour and avoid copy
     std::vector<Point_t> contour;
-    getContour(i, contour);
+    getContour(i, contour); // this method also transforms map to world coordinates
 
     // convert contour to polygon
     for (const Point_t& pt : contour)
@@ -249,11 +255,6 @@ void CostmapToDynamicObstacles::compute()
   ////////////////////////// Static obstacles ////////////////////////////
   if (publish_static_obstacles_)
   {
-    // Get static obstacles
-    cv::Mat bg_mat = costmap_mat_ - fg_mask_;
-
-    //visualize("bg", bg_mat);
-
     uchar* img_data = bg_mat.data;
     int width = bg_mat.cols;
     int height = bg_mat.rows;
@@ -269,8 +270,8 @@ void CostmapToDynamicObstacles::compute()
             // obstacle found
             obstacles->obstacles.emplace_back();
             geometry_msgs::Point32 pt;
-            pt.x = i;
-            pt.y = j;
+            pt.x = (double)j*costmap_->getResolution() + costmap_->getOriginX();
+            pt.y = (double)i*costmap_->getResolution() + costmap_->getOriginY();
             obstacles->obstacles.back().polygon.points.push_back(pt);
             obstacles->obstacles.back().velocities.twist.linear.x = 0;
             obstacles->obstacles.back().velocities.twist.linear.y = 0;
@@ -303,8 +304,10 @@ void CostmapToDynamicObstacles::updateCostmap2D()
   costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
 
   // Initialize costmapMat_ directly with the unsigned char array of costmap_
+  //costmap_mat_ = cv::Mat(costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY(), CV_8UC1,
+  //                      costmap_->getCharMap()).clone(); // Deep copy: TODO
   costmap_mat_ = cv::Mat(costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY(), CV_8UC1,
-                        costmap_->getCharMap()).clone(); // Erstmal sicherer
+                        costmap_->getCharMap());
 }
 
 ObstacleArrayConstPtr CostmapToDynamicObstacles::getObstacles()
