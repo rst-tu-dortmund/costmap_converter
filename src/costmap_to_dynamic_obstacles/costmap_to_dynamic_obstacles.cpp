@@ -247,7 +247,7 @@ void CostmapToDynamicObstacles::compute()
   }
 
   ////////////////////////// Static obstacles ////////////////////////////
-/*
+
   // Get static obstacles
   cv::Mat bg_mat = costmap_mat_ - fg_mask_;
 
@@ -273,11 +273,17 @@ void CostmapToDynamicObstacles::compute()
        if (p[j] > 0)
        {
          // obstacle found
+         obstacles->obstacles.emplace_back();
+         geometry_msgs::Point32 pt;
+         pt.x = i;
+         pt.y = j;
+         obstacles->obstacles.back().polygon.points.push_back(pt);
 
+         obstacles->obstacles.back().id = -1;
        }
     }
   }
-  */
+
   updateObstacleContainer(obstacles);
 }
 
