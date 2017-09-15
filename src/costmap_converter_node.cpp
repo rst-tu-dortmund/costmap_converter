@@ -87,9 +87,13 @@ public:
 
       occupied_min_value_ = 100;
       n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
+
+      std::string odom_topic = "/odom";
+      n_.param("odom_topic", odom_topic, odom_topic);
       
       if (converter_)
       {
+        converter_->setOdomTopic(odom_topic);
         converter_->initialize(n_);
         converter_->setCostmap2D(&map); 
         //converter_->startWorker(ros::Rate(5), &map, true);

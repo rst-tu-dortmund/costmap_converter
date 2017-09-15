@@ -149,6 +149,15 @@ public:
       return obstacles;
     }
 
+    /**
+     * @brief Set name of robot's odometry topic
+     *
+     * Some plugins might require odometry information
+     * to compensate the robot's ego motion
+     * @param odom_topic topic name
+     */
+    virtual void setOdomTopic(const std::string& odom_topic) {}
+
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
       * The worker is implemented as a timer event that is invoked at a specific \c rate.

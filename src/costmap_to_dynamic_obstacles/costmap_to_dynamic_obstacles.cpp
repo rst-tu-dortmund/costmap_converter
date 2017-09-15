@@ -26,10 +26,7 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
   costmap_ = nullptr;
 
   // We need the odometry from the robot to compensate the ego motion
-  std::string odom_topic = "/odom";
-  nh.param("odom_topic", odom_topic, odom_topic);
-
-  odom_sub_ = nh.subscribe(odom_topic, 1, &CostmapToDynamicObstacles::odomCallback, this);
+  odom_sub_ = nh.subscribe(odom_topic_, 1, &CostmapToDynamicObstacles::odomCallback, this);
 
   //////////////////////////////////
   // Foreground detection parameters

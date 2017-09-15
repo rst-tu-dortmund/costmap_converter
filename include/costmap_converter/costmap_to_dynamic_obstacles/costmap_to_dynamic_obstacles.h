@@ -121,6 +121,20 @@ public:
   ObstacleArrayConstPtr getObstacles();
 
   /**
+   * @brief Set name of robot's odometry topic
+   *
+   * @warning The method must be called before initialize()
+   *
+   * Some plugins might require odometry information
+   * to compensate the robot's ego motion
+   * @param odom_topic topic name
+   */
+  virtual void setOdomTopic(const std::string& odom_topic)
+  {
+    odom_topic_ = odom_topic;
+  }
+
+  /**
    * @brief OpenCV Visualization
    * @param name  Id/name of the opencv window
    * @param image Image to be visualized
@@ -166,6 +180,8 @@ private:
   std::unique_ptr<CTracker> tracker_;
   ros::Subscriber odom_sub_;
   Point_t ego_vel_;
+
+  std::string odom_topic_ = "/odom";
 
   dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>*
       dynamic_recfg_; //!< Dynamic reconfigure server to allow config
