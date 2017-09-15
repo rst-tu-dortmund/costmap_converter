@@ -62,6 +62,7 @@ set (CMAKE_CXX_STANDARD 11)
 add_message_files(
   FILES
   ObstacleMsg.msg
+  ObstacleArrayMsg.msg
 )
 
 ## Generate services in the 'srv' folder

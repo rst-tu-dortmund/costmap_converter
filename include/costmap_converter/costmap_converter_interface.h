@@ -46,15 +46,15 @@
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/Polygon.h>
-#include <costmap_converter/ObstacleMsg.h>
+#include <costmap_converter/ObstacleArrayMsg.h>
 
 
 namespace costmap_converter
 {
 //! Typedef for a shared dynamic obstacle container
-typedef boost::shared_ptr<ObstacleMsg> ObstacleContainerPtr;
+typedef boost::shared_ptr<ObstacleArrayMsg> ObstacleArrayPtr;
 //! Typedef for a shared dynamic obstacle container (read-only access)
-typedef boost::shared_ptr< const ObstacleMsg > ObstacleContainerConstPtr;
+typedef boost::shared_ptr< const ObstacleArrayMsg > ObstacleArrayConstPtr;
 
 //! Typedef for a shared polygon container 
 typedef boost::shared_ptr< std::vector<geometry_msgs::Polygon> > PolygonContainerPtr;
@@ -73,6 +73,8 @@ typedef boost::shared_ptr< const std::vector<geometry_msgs::Polygon> > PolygonCo
  * 2. Repeatedly process costmap with a specific rate (startWorker() and stopWorker()):
  *    Make sure that the costmap is valid while the worker is active (you can specify your own spinner or activate a threaded spinner).
  *    Costmaps can be obtained by invoking getPolygons().
+ *
+ * @todo allow different plugins for both static and dynamic obstacles (arbitrary combinations)
  */
 class BaseCostmapToPolygons
 {
@@ -132,9 +134,9 @@ public:
    * @return Shared instance of the current obstacle container
    * @sa getPolygons
    */
-    virtual ObstacleContainerConstPtr getObstacles()
+    virtual ObstacleArrayConstPtr getObstacles()
     {
-      ObstacleContainerPtr obstacles = boost::make_shared<ObstacleMsg>();
+      ObstacleArrayPtr obstacles = boost::make_shared<ObstacleArrayMsg>();
       PolygonContainerConstPtr polygons = getPolygons();
       if (polygons)
       {

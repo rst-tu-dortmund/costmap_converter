@@ -176,29 +176,21 @@ void CostmapToDynamicObstacles::compute()
 
 
   ///////////////////////////////////// Output ///////////////////////////////////////
+  /*
   cv::Mat fg_mask_with_keypoints = cv::Mat::zeros(fg_mask.size(), CV_8UC3);
   cv::cvtColor(fg_mask, fg_mask_with_keypoints, cv::COLOR_GRAY2BGR);
 
-//  for (auto p : detectedCenters)
-//    cv::circle(fgMaskWithKeypoints, cv::Point(round(p.x), round(p.y)), 3, cv::Scalar(0, 255, 0), 1);
-
-  for (int i = 0; i < tracker_->tracks.size(); i++)
+  for (int i = 0; i < (int)tracker_->tracks.size(); ++i)
     cv::rectangle(fg_mask_with_keypoints, cv::boundingRect(tracker_->tracks[i]->getLastContour()),
                   cv::Scalar(0, 0, 255), 1);
 
   //visualize("fgMaskWithKeyPoints", fgMaskWithKeypoints);
   //cv::imwrite("/home/albers/Desktop/fgMask.png", fgMask);
   //cv::imwrite("/home/albers/Desktop/fgMaskWithKeyPoints.png", fgMaskWithKeypoints);
-
-//  if(!tracker_->tracks.empty())
-//  {
-//    Point_t vel = getEstimatedVelocityOfObject(0);
-//    ROS_INFO("Estimated: vel_x = %f, vel_y = %f, vel_z = %f", vel.x, vel.y, vel.z);
-//  }
-
+  */
 
   //////////////////////////// Fill ObstacleContainerPtr /////////////////////////////
-  ObstacleContainerPtr obstacles (new ObstacleMsg);
+  ObstacleArrayPtr obstacles(new ObstacleArrayMsg);
   // header.seq is automatically filled
   obstacles->header.stamp = ros::Time::now();
   obstacles->header.frame_id = "/map"; //Global frame /map
@@ -206,7 +198,7 @@ void CostmapToDynamicObstacles::compute()
   // For all tracked objects
   for (unsigned int i = 0; i < (unsigned int)tracker_->tracks.size(); ++i)
   {
-    geometry_msgs::PolygonStamped polygon;
+    geometry_msgs::Polygon polygon;
 
     std::vector<Point_t> contour;
     getContour(i, contour);
@@ -214,16 +206,17 @@ void CostmapToDynamicObstacles::compute()
     // convert contour to polygon
     for (const Point_t& pt : contour)
     {
-      polygon.polygon.points.emplace_back();
-      polygon.polygon.points.back().x = pt.x;
-      polygon.polygon.points.back().y = pt.y;
-      polygon.polygon.points.back().z = 0;
+      polygon.points.emplace_back();
+      polygon.points.back().x = pt.x;
+      polygon.points.back().y = pt.y;
+      polygon.points.back().z = 0;
     }
 
-    obstacles->obstacles.push_back(polygon);
+    obstacles->obstacles.emplace_back();
+    obstacles->obstacles.back().polygon = polygon;
 
     // Set obstacle ID
-    obstacles->ids.push_back(tracker_->tracks.at(i)->track_id);
+    obstacles->obstacles.back().id = tracker_->tracks.at(i)->track_id;
 
     // Set orientation
     geometry_msgs::QuaternionStamped orientation;
@@ -231,8 +224,7 @@ void CostmapToDynamicObstacles::compute()
     Point_t vel = getEstimatedVelocityOfObject(i);
     double yaw = std::atan2(vel.y, vel.x);
     //ROS_INFO("yaw: %f", yaw);
-    orientation.quaternion = tf::createQuaternionMsgFromYaw(yaw);
-    obstacles->orientations.push_back(orientation);
+    obstacles->obstacles.back().orientation = tf::createQuaternionMsgFromYaw(yaw);
 
     // Set velocity
     geometry_msgs::TwistWithCovariance velocities;
@@ -251,9 +243,41 @@ void CostmapToDynamicObstacles::compute()
                              0, 0, 0, 0, 1, 0,
                              0, 0, 0, 0, 0, 1};
 
-    obstacles->velocities.push_back(velocities);
+    obstacles->obstacles.back().velocities = velocities;
   }
 
+  ////////////////////////// Static obstacles ////////////////////////////
+/*
+  // Get static obstacles
+  cv::Mat bg_mat = costmap_mat_ - fg_mask_;
+
+  // efficient cv::Mat element access:
+  int n_rows = bg_mat.rows;
+  int n_cols = bg_mat.cols;// * bg_mat.channels();
+
+  // accept only char type matrices
+  CV_Assert(bg_mat.depth() == CV_8U);
+
+  if (bg_mat.isContinuous())
+  {
+    n_cols *= n_rows;
+    n_rows = 1;
+  }
+
+  uchar* p;
+  for(int i = 0; i < n_rows; ++i)
+  {
+    p = bg_mat.ptr<uchar>(i);
+    for (int j = 0; j < n_cols; ++j)
+    {
+       if (p[j] > 0)
+       {
+         // obstacle found
+
+       }
+    }
+  }
+  */
   updateObstacleContainer(obstacles);
 }
 
@@ -281,13 +305,13 @@ void CostmapToDynamicObstacles::updateCostmap2D()
                         costmap_->getCharMap()).clone(); // Erstmal sicherer
 }
 
-ObstacleContainerConstPtr CostmapToDynamicObstacles::getObstacles()
+ObstacleArrayConstPtr CostmapToDynamicObstacles::getObstacles()
 {
   boost::mutex::scoped_lock lock(mutex_);
   return obstacles_;
 }
 
-void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleContainerPtr obstacles)
+void CostmapToDynamicObstacles::updateObstacleContainer(ObstacleArrayPtr obstacles)
 {
   boost::mutex::scoped_lock lock(mutex_);
   obstacles_ = obstacles;

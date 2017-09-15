@@ -70,6 +70,9 @@ namespace costmap_converter {
 /**
  * @class CostmapToDynamicObstacles
  * @brief This class converts the costmap_2d into dynamic obstacles.
+ *
+ * Static obstacles are treated as point obstacles.
+ * @todo allow different plugins for both static and dynamic obstacles (arbitrary combinations)
  */
 class CostmapToDynamicObstacles : public BaseCostmapToPolygons
 {
@@ -115,7 +118,7 @@ public:
    * method returns an empty instance!
    * @return Shared instance of the current obstacle container
    */
-  ObstacleContainerConstPtr getObstacles();
+  ObstacleArrayConstPtr getObstacles();
 
   /**
    * @brief OpenCV Visualization
@@ -149,13 +152,13 @@ protected:
    * class)
    * @param obstacles Updated obstacle container
    */
-  void updateObstacleContainer(ObstacleContainerPtr obstacles);
+  void updateObstacleContainer(ObstacleArrayPtr obstacles);
 
 private:
   boost::mutex mutex_;
   costmap_2d::Costmap2D* costmap_;
   cv::Mat costmap_mat_;
-  ObstacleContainerPtr obstacles_;
+  ObstacleArrayPtr obstacles_;
   cv::Mat fg_mask_;
   std::unique_ptr<BackgroundSubtractor> bg_sub_;
   cv::Ptr<BlobDetector> blob_det_;
