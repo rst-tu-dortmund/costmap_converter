@@ -54,7 +54,7 @@ public:
   CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
       
-      std::string converter_plugin = "costmap_converter::CostmapToDynamicObstacles";
+      std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
       n_.param("converter_plugin", converter_plugin, converter_plugin);
       
       try
