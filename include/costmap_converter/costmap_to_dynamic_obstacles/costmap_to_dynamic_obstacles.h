@@ -50,7 +50,7 @@
 
 // OpenCV
 #include <cv_bridge/cv_bridge.h>
-#include <opencv2/features2d.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #include <opencv2/video/tracking.hpp>
 
 // dynamic reconfigure
