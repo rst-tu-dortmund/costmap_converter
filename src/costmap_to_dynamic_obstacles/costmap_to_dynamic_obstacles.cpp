@@ -234,8 +234,10 @@ void CostmapToDynamicObstacles::compute()
 
     // Set velocity
     geometry_msgs::TwistWithCovariance velocities;
-    velocities.twist.linear.x = std::sqrt(vel.x*vel.x + vel.y*vel.y);
-    velocities.twist.linear.y = 0;
+    //velocities.twist.linear.x = std::sqrt(vel.x*vel.x + vel.y*vel.y);
+    //velocities.twist.linear.y = 0;
+    velocities.twist.linear.x = vel.x;
+    velocities.twist.linear.y = vel.y; // TODO(roesmann): don't we need to consider the transformation between opencv's and costmap's coordinate frames?
     velocities.twist.linear.z = 0;
     velocities.twist.angular.x = 0;
     velocities.twist.angular.y = 0;
