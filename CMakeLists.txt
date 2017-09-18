@@ -145,6 +145,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -159,7 +160,7 @@ add_library(costmap_converter   src/costmap_to_polygons.cpp
                                 src/costmap_to_dynamic_obstacles/multitarget_tracker/Kalman.cpp
                                 src/costmap_to_dynamic_obstacles/multitarget_tracker/HungarianAlg.cpp
 )
-target_link_libraries(costmap_converter ${catkin_LIBRARIES})
+target_link_libraries(costmap_converter ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 # target_compile_features(costmap_converter PUBLIC cxx_nullptr cxx_range_for)
 
 # Dynamic reconfigure: make sure configure headers raare built before any node using them
