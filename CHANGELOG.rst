@@ -2,6 +2,18 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* This pull request adds the costmap to dynamic obstacles plugin (written by Franz Albers).
+  It detects the dynamic foreground of the costmap (based on the temporal evolution of the costmap)
+  including blobs representing the obstacles. Furthermore, Kalman-based tracking is applied to estimate
+  the current velocity for each obstacle.
+  **Note, this plugin is still experimental.**
+* New message types are introduced: costmap\_converter::ObstacleMsg and costmap\_converter::ObstacleArrayMsg.
+  These types extend the previous polygon representation by additional velocity, orientation and id information.
+* The API has been extended to provide obstacles via the new ObstacleArrayMsg type instead of vector of polygons.
+* Contributors: Franz Albers, Christoph Rösmann
+
 0.0.5 (2016-02-01)
 ------------------
 * Major changes regarding the line detection based on the convex hull
