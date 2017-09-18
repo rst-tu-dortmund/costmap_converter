@@ -69,21 +69,34 @@ public:
       
       ROS_INFO_STREAM(converter_plugin << " loaded.");
       
-      costmap_sub_ = n_.subscribe("/move_base/local_costmap/costmap", 1, &CostmapStandaloneConversion::costmapCallback, this);
-      polygon_pub_ = n_.advertise<geometry_msgs::PolygonStamped>("/costmap_polygons", 1000);
-      marker_pub_ = n_.advertise<visualization_msgs::Marker>("/costmap_polygon_markers", 10);
+      std::string costmap_topic = "move_base/local_costmap/costmap";
+      n_.param("costmap_topic", costmap_topic, costmap_topic);
+
+      std::string obstacles_topic = "costmap_obstacles";
+      n_.param("obstacles_topic", obstacles_topic, obstacles_topic);
+
+      std::string polygon_marker_topic = "costmap_polygon_markers";
+      n_.param("polygon_marker_topic", polygon_marker_topic, polygon_marker_topic);
+
+      costmap_sub_ = n_.subscribe(costmap_topic, 1, &CostmapStandaloneConversion::costmapCallback, this);
+      obstacle_pub_ = n_.advertise<costmap_converter::ObstacleArrayMsg>(obstacles_topic, 1000);
+      marker_pub_ = n_.advertise<visualization_msgs::Marker>(polygon_marker_topic, 10);
       
       frame_id_ = "/map";
       n_.param("frame_id", frame_id_, frame_id_);
 
       occupied_min_value_ = 100;
       n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
+
+      std::string odom_topic = "/odom";
+      n_.param("odom_topic", odom_topic, odom_topic);
       
       if (converter_)
       {
+        converter_->setOdomTopic(odom_topic);
         converter_->initialize(n_);
         converter_->setCostmap2D(&map); 
-//         converter_->startWorker(ros::Rate(5), &map, true);
+        //converter_->startWorker(ros::Rate(5), &map, true);
       }
    }
    
@@ -113,25 +126,18 @@ public:
       // convert
       converter_->updateCostmap2D();
       converter_->compute();
-      costmap_converter::PolygonContainerConstPtr polygons = converter_->getPolygons();
-      if (!polygons)
+      costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
+
+      if (!obstacles)
         return;
 
-      for (std::size_t i=0; i < polygons->size(); ++i)
-      {
-         geometry_msgs::PolygonStamped polygon;
-         polygon.header.frame_id = msg->header.frame_id;
-         polygon.header.stamp = ros::Time::now();
-         polygon.polygon = polygons->at(i);
-         polygon_pub_.publish(polygon);       
-      }
+      obstacle_pub_.publish(obstacles);
       
-      
-      publishAsMarker(msg->header.frame_id, *polygons, marker_pub_);
+      publishAsMarker(msg->header.frame_id, *obstacles, marker_pub_);
       
   }
   
-  void publishAsMarker(const std::string& frame_id, const std::vector<geometry_msgs::Polygon>& polygons, ros::Publisher& marker_pub)
+  void publishAsMarker(const std::string& frame_id, const std::vector<geometry_msgs::PolygonStamped>& polygonStamped, ros::Publisher& marker_pub)
   {
     visualization_msgs::Marker line_list;
     line_list.header.frame_id = frame_id;
@@ -147,31 +153,31 @@ public:
     line_list.color.g = 1.0;
     line_list.color.a = 1.0;
     
-    for (std::size_t i=0; i<polygons.size(); ++i)
+    for (std::size_t i=0; i<polygonStamped.size(); ++i)
     {
-      for (int j=0; j< (int)polygons[i].points.size()-1; ++j)
+      for (int j=0; j< (int)polygonStamped[i].polygon.points.size()-1; ++j)
       {
         geometry_msgs::Point line_start;
-        line_start.x = polygons[i].points[j].x;
-        line_start.y = polygons[i].points[j].y;
+        line_start.x = polygonStamped[i].polygon.points[j].x;
+        line_start.y = polygonStamped[i].polygon.points[j].y;
         line_list.points.push_back(line_start);
         geometry_msgs::Point line_end;
-        line_end.x = polygons[i].points[j+1].x;
-        line_end.y = polygons[i].points[j+1].y;
+        line_end.x = polygonStamped[i].polygon.points[j+1].x;
+        line_end.y = polygonStamped[i].polygon.points[j+1].y;
         line_list.points.push_back(line_end);
       }     
       // close loop for current polygon
-      if (!polygons[i].points.empty() && polygons[i].points.size() != 2 )  
+      if (!polygonStamped[i].polygon.points.empty() && polygonStamped[i].polygon.points.size() != 2 )
       {
         geometry_msgs::Point line_start;
-        line_start.x = polygons[i].points.back().x;
-        line_start.y = polygons[i].points.back().y;
+        line_start.x = polygonStamped[i].polygon.points.back().x;
+        line_start.y = polygonStamped[i].polygon.points.back().y;
         line_list.points.push_back(line_start);
         if (line_list.points.size() % 2 != 0)
         {
           geometry_msgs::Point line_end;
-          line_end.x = polygons[i].points.front().x;
-          line_end.y = polygons[i].points.front().y;
+          line_end.x = polygonStamped[i].polygon.points.front().x;
+          line_end.y = polygonStamped[i].polygon.points.front().y;
           line_list.points.push_back(line_end);
         }
       }
@@ -180,8 +186,56 @@ public:
     }
     marker_pub.publish(line_list);
   }
-  
 
+  void publishAsMarker(const std::string& frame_id, const costmap_converter::ObstacleArrayMsg& obstacles, ros::Publisher& marker_pub)
+  {
+    visualization_msgs::Marker line_list;
+    line_list.header.frame_id = frame_id;
+    line_list.header.stamp = ros::Time::now();
+    line_list.ns = "Polygons";
+    line_list.action = visualization_msgs::Marker::ADD;
+    line_list.pose.orientation.w = 1.0;
+
+    line_list.id = 0;
+    line_list.type = visualization_msgs::Marker::LINE_LIST;
+
+    line_list.scale.x = 0.1;
+    line_list.color.g = 1.0;
+    line_list.color.a = 1.0;
+
+    for (const costmap_converter::ObstacleMsg& obstacle : obstacles.obstacles)
+    {
+      for (int j=0; j< (int)obstacle.polygon.points.size()-1; ++j)
+      {
+        geometry_msgs::Point line_start;
+        line_start.x = obstacle.polygon.points[j].x;
+        line_start.y = obstacle.polygon.points[j].y;
+        line_list.points.push_back(line_start);
+        geometry_msgs::Point line_end;
+        line_end.x = obstacle.polygon.points[j+1].x;
+        line_end.y = obstacle.polygon.points[j+1].y;
+        line_list.points.push_back(line_end);
+      }
+      // close loop for current polygon
+      if (!obstacle.polygon.points.empty() && obstacle.polygon.points.size() != 2 )
+      {
+        geometry_msgs::Point line_start;
+        line_start.x = obstacle.polygon.points.back().x;
+        line_start.y = obstacle.polygon.points.back().y;
+        line_list.points.push_back(line_start);
+        if (line_list.points.size() % 2 != 0)
+        {
+          geometry_msgs::Point line_end;
+          line_end.x = obstacle.polygon.points.front().x;
+          line_end.y = obstacle.polygon.points.front().y;
+          line_list.points.push_back(line_end);
+        }
+      }
+
+
+    }
+    marker_pub.publish(line_list);
+  }
   
 private:
   pluginlib::ClassLoader<costmap_converter::BaseCostmapToPolygons> converter_loader_;
@@ -189,7 +243,7 @@ private:
   
   ros::NodeHandle n_;
   ros::Subscriber costmap_sub_;
-  ros::Publisher polygon_pub_;
+  ros::Publisher obstacle_pub_;
   ros::Publisher marker_pub_;
   
   std::string frame_id_;
@@ -203,16 +257,13 @@ private:
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "costmap_converter");
-    
   
   CostmapStandaloneConversion convert_process;
   
   ros::spin();
-  
+
   costmap_2d::Costmap2D costmap;
   
-  
-
   return 0;
 }
 

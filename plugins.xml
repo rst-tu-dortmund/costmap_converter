@@ -28,5 +28,11 @@
       This class converts costmap2d obstacles into a vector of non-convex (concave) polygons. 
   </description>
   </class>
+
+  <class type="costmap_converter::CostmapToDynamicObstacles" base_class_type="costmap_converter::BaseCostmapToPolygons">
+  <description>
+      This class detects and tracks obstacles from a sequence of costmaps. 
+  </description>
+  </class>
   
 </library>

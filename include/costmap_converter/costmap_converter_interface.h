@@ -46,11 +46,16 @@
 #include <costmap_2d/costmap_2d.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/Polygon.h>
+#include <costmap_converter/ObstacleArrayMsg.h>
 
 
 namespace costmap_converter
 {
- 
+//! Typedef for a shared dynamic obstacle container
+typedef boost::shared_ptr<ObstacleArrayMsg> ObstacleArrayPtr;
+//! Typedef for a shared dynamic obstacle container (read-only access)
+typedef boost::shared_ptr< const ObstacleArrayMsg > ObstacleArrayConstPtr;
+
 //! Typedef for a shared polygon container 
 typedef boost::shared_ptr< std::vector<geometry_msgs::Polygon> > PolygonContainerPtr;
 //! Typedef for a shared polygon container (read-only access)
@@ -68,6 +73,8 @@ typedef boost::shared_ptr< const std::vector<geometry_msgs::Polygon> > PolygonCo
  * 2. Repeatedly process costmap with a specific rate (startWorker() and stopWorker()):
  *    Make sure that the costmap is valid while the worker is active (you can specify your own spinner or activate a threaded spinner).
  *    Costmaps can be obtained by invoking getPolygons().
+ *
+ * @todo allow different plugins for both static and dynamic obstacles (arbitrary combinations)
  */
 class BaseCostmapToPolygons
 {
@@ -110,13 +117,47 @@ public:
     
     /**
      * @brief Get a shared instance of the current polygon container
+     *
+     * If this method is not implemented by any subclass (plugin) the returned shared
+     * pointer is empty.
      * @remarks If compute() or startWorker() has not been called before, this method returns an empty instance!
      * @warning The underlying plugin must ensure that this method is thread safe.
      * @return Shared instance of the current polygon container
      */
-    virtual PolygonContainerConstPtr getPolygons() = 0;
-      
-    
+    virtual PolygonContainerConstPtr getPolygons(){return PolygonContainerConstPtr();}
+
+  /**
+   * @brief Get a shared instance of the current obstacle container
+   * If this method is not overwritten by the underlying plugin, the obstacle container just imports getPolygons().
+   * @remarks If compute() or startWorker() has not been called before, this method returns an empty instance!
+   * @warning The underlying plugin must ensure that this method is thread safe.
+   * @return Shared instance of the current obstacle container
+   * @sa getPolygons
+   */
+    virtual ObstacleArrayConstPtr getObstacles()
+    {
+      ObstacleArrayPtr obstacles = boost::make_shared<ObstacleArrayMsg>();
+      PolygonContainerConstPtr polygons = getPolygons();
+      if (polygons)
+      {
+        for (const geometry_msgs::Polygon& polygon : *polygons)
+        {
+          obstacles->obstacles.emplace_back();
+          obstacles->obstacles.back().polygon = polygon;
+        }
+      }
+      return obstacles;
+    }
+
+    /**
+     * @brief Set name of robot's odometry topic
+     *
+     * Some plugins might require odometry information
+     * to compensate the robot's ego motion
+     * @param odom_topic topic name
+     */
+    virtual void setOdomTopic(const std::string& odom_topic) {}
+
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
       * The worker is implemented as a timer event that is invoked at a specific \c rate.
@@ -175,7 +216,6 @@ public:
       }
     }
 
-    
 protected:
   
     /**

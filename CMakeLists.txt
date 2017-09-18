@@ -10,14 +10,16 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   roscpp
   std_msgs
+  message_generation
   costmap_2d
   dynamic_reconfigure
   pluginlib
+  cv_bridge
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-
+find_package(OpenCV REQUIRED)
 
 ###set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR})
 ###find_package(Eigen3 REQUIRED)
@@ -29,6 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
 
+set (CMAKE_CXX_STANDARD 11)
 
 
 ################################################
@@ -56,11 +59,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  ObstacleMsg.msg
+  ObstacleArrayMsg.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -77,10 +80,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   std_msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   geometry_msgs std_msgs
+)
 
 #add dynamic reconfigure api
 #find_package(catkin REQUIRED dynamic_reconfigure)
@@ -89,6 +92,7 @@ generate_dynamic_reconfigure_options(
   cfg/dynamic_reconfigure/CostmapToPolygonsDBSConcaveHull.cfg
   cfg/dynamic_reconfigure/CostmapToLinesDBSMCCH.cfg
   cfg/dynamic_reconfigure/CostmapToLinesDBSRANSAC.cfg
+  cfg/dynamic_reconfigure/CostmapToDynamicObstacles.cfg
 )
 
 ###################################
@@ -107,7 +111,8 @@ catkin_package(
     geometry_msgs
     pluginlib
     roscpp 
-    std_msgs 
+    std_msgs
+    message_runtime 
     dynamic_reconfigure
     costmap_2d
   #DEPENDS 
@@ -126,26 +131,35 @@ include_directories(
 )
 
 ## Declare a cpp library
-add_library(costmap_converter 	src/costmap_to_polygons.cpp 
-				src/costmap_to_polygons_concave.cpp
-				src/costmap_to_lines_convex_hull.cpp
-				src/costmap_to_lines_ransac.cpp)
-target_link_libraries(costmap_converter ${catkin_LIBRARIES} )  
+add_library(costmap_converter   src/costmap_to_polygons.cpp 
+                                src/costmap_to_polygons_concave.cpp
+                                src/costmap_to_lines_convex_hull.cpp
+                                src/costmap_to_lines_ransac.cpp
+                                src/costmap_to_dynamic_obstacles/costmap_to_dynamic_obstacles.cpp
+                                src/costmap_to_dynamic_obstacles/background_subtractor.cpp
+                                src/costmap_to_dynamic_obstacles/blob_detector.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/Ctracker.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/Kalman.cpp
+                                src/costmap_to_dynamic_obstacles/multitarget_tracker/HungarianAlg.cpp
+)
+target_link_libraries(costmap_converter ${catkin_LIBRARIES})
+# target_compile_features(costmap_converter PUBLIC cxx_nullptr cxx_range_for)
 
+# Dynamic reconfigure: make sure configure headers raare built before any node using them
+add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
+# Generate messages before compiling the lib
+add_dependencies(costmap_converter ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Declare a cpp executable
 add_executable(standalone_converter src/costmap_converter_node.cpp)
 target_link_libraries(standalone_converter ${catkin_LIBRARIES} )
+add_dependencies(standalone_converter costmap_converter)
   
-     
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-# add_dependencies(drawing_node drawing_generate_messages_cpp)
-
-# Dynamic reconfigure: make sure configure headers are built before any node using them
-add_dependencies(costmap_converter ${PROJECT_NAME}_gencfg)
-
-## Specify libraries to link a library or executable target against
+# (un)set: cmake -DCVV_DEBUG_MODE=OFF ..
+option(CVV_DEBUG_MODE "cvvisual-debug-mode" ON)
+if(CVV_DEBUG_MODE MATCHES ON)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCVVISUAL_DEBUGMODE")
+endif()
 
 
 
