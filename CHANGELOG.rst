@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.6 (2017-09-18)
+------------------
 * This pull request adds the costmap to dynamic obstacles plugin (written by Franz Albers).
   It detects the dynamic foreground of the costmap (based on the temporal evolution of the costmap)
   including blobs representing the obstacles. Furthermore, Kalman-based tracking is applied to estimate
