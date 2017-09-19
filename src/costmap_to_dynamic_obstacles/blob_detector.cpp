@@ -1,6 +1,4 @@
 #include <costmap_converter/costmap_to_dynamic_obstacles/blob_detector.h>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/core/base.hpp>
 #include <opencv2/opencv.hpp>
 
 BlobDetector::BlobDetector(const SimpleBlobDetector::Params& parameters) : params_(parameters) {}
