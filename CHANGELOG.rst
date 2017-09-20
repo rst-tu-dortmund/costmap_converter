@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.7 (2017-09-20)
+------------------
 * Fixed some compilation issues (C++11 compiler flags and opencv2 on indigo/jade).
 * Dynamic obstacle plugin: obstacle velocity is now published for both x and y coordinates rather than the absolute value
 
