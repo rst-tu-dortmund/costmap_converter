@@ -73,8 +73,6 @@ typedef boost::shared_ptr< const std::vector<geometry_msgs::Polygon> > PolygonCo
  * 2. Repeatedly process costmap with a specific rate (startWorker() and stopWorker()):
  *    Make sure that the costmap is valid while the worker is active (you can specify your own spinner or activate a threaded spinner).
  *    Costmaps can be obtained by invoking getPolygons().
- *
- * @todo allow different plugins for both static and dynamic obstacles (arbitrary combinations)
  */
 class BaseCostmapToPolygons
 {
@@ -157,6 +155,13 @@ public:
      * @param odom_topic topic name
      */
     virtual void setOdomTopic(const std::string& odom_topic) {}
+
+    /**
+     * @brief Determines whether an additional plugin for subsequent costmap conversion is specified
+     *
+     * @return false, since all plugins for static costmap conversion are independent
+     */
+    virtual bool stackedCostmapConversion() {return false;}
 
      /**
       * @brief Instantiate a worker that repeatedly coverts the most recent costmap to polygons.
@@ -256,7 +261,76 @@ private:
   boost::mutex terminate_mutex_;
   bool need_to_terminate_;
 };    
-    
+
+
+/**
+ * @class BaseCostmapToDynamicPolygons
+ * @brief This class extends the BaseCostmapToPolygongs class for dynamic costmap conversion plugins in order to incorporate a subsequent costmap converter plugin for static obstacles
+ *
+ * This class should not be instantiated.
+ */
+class BaseCostmapToDynamicObstacles : public BaseCostmapToPolygons
+{
+public:
+  /**
+   * @brief Set the underlying plugin for subsequent costmap conversion of the static background of the costmap
+   * @param static_costmap_converter shared pointer to the static costmap conversion plugin
+   */
+  void setStaticCostmapConverterPlugin(boost::shared_ptr<BaseCostmapToPolygons> static_costmap_converter)
+  {
+    static_costmap_converter_ = static_costmap_converter;
+  }
+
+  /**
+   * @brief Set the costmap for the underlying plugin
+   * @param static_costmap Costmap2D, which contains the static part of the original costmap
+   */
+  void setStaticCostmap(boost::shared_ptr<costmap_2d::Costmap2D> static_costmap)
+  {
+    static_costmap_converter_->setCostmap2D(static_costmap.get());
+  }
+
+  /**
+   * @brief Apply the underlying plugin for static costmap conversion
+   */
+  void convertStaticObstacles()
+  {
+    static_costmap_converter_->compute();
+  }
+
+  /**
+   * @brief Get the converted polygons from the underlying plugin
+   * @return Shared instance of the underlying plugins polygon container
+   */
+  PolygonContainerConstPtr getStaticPolygons()
+  {
+    return static_costmap_converter_->getPolygons();
+  }
+
+  /**
+   * @brief Determines whether an additional plugin for subsequent costmap conversion is specified
+   *
+   * @return true, if a plugin for subsequent costmap conversion is specified
+   */
+  bool stackedCostmapConversion()
+  {
+    if(static_costmap_converter_)
+      return true;
+    else
+      return false;
+  }
+
+protected:
+  /**
+   * @brief Protected constructor that should be called by subclasses
+   */
+  BaseCostmapToDynamicObstacles() : static_costmap_converter_() {}
+
+private:
+  boost::shared_ptr<BaseCostmapToPolygons> static_costmap_converter_;
+};
+
+
 }
 
 
