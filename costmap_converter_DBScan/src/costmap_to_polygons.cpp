@@ -125,15 +125,22 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
 {
       occupied_cells_.clear();
 
+#if ROS_VERSION_MINOR > 11 // 11 == Indigo
      if (!costmap_->getMutex())
+#else
+     if (!costmap_->getLock())
+#endif
       {
         ROS_ERROR("Cannot update costmap since the mutex pointer is null");
         return;
       }
 
       int idx = 0;
-
+#if ROS_VERSION_MINOR > 11 // 11 == Indigo
      costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getLock());
+#else
+     boost::shared_lock<boost::shared_mutex> lock(*costmap_->getLock());
+#endif
 
       // get indices of obstacle cells
       for(std::size_t i = 0; i < costmap_->getSizeInCellsX(); i++)

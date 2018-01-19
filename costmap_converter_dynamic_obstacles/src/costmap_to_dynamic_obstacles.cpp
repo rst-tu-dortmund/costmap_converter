@@ -170,7 +170,7 @@ void CostmapToDynamicObstacles::compute()
   // Objects are assigned to objects from previous frame based on Hungarian Algorithm
   // Object velocities are estimated using a Kalman Filter
   std::vector<Point_t> detected_centers(keypoints_.size());
-  for (int i = 0; i < keypoints_.size(); i++)
+  for (std::size_t i = 0; i < keypoints_.size(); i++)
   {
     detected_centers.at(i).x = keypoints_.at(i).pt.x;
     detected_centers.at(i).y = keypoints_.at(i).pt.y;
@@ -244,12 +244,12 @@ void CostmapToDynamicObstacles::compute()
     velocities.twist.angular.z = 0;
 
     // TODO: use correct covariance matrix
-    velocities.covariance = {1, 0, 0, 0, 0, 0,
-                             0, 1, 0, 0, 0, 0,
-                             0, 0, 1, 0, 0, 0,
-                             0, 0, 0, 1, 0, 0,
-                             0, 0, 0, 0, 1, 0,
-                             0, 0, 0, 0, 0, 1};
+    velocities.covariance = {{1, 0, 0, 0, 0, 0,
+                              0, 1, 0, 0, 0, 0,
+                              0, 0, 1, 0, 0, 0,
+                              0, 0, 0, 1, 0, 0,
+                              0, 0, 0, 0, 1, 0,
+                              0, 0, 0, 0, 0, 1}};
 
     obstacles->obstacles.back().velocities = velocities;
   }
@@ -298,12 +298,22 @@ void CostmapToDynamicObstacles::setCostmap2D(costmap_2d::Costmap2D* costmap)
 
 void CostmapToDynamicObstacles::updateCostmap2D()
 {
-  if (!costmap_->getMutex())
+
+#if ROS_VERSION_MINOR > 11 // 11 == Indigo
+     if (!costmap_->getMutex())
+#else
+     if (!costmap_->getLock())
+#endif
   {
     ROS_ERROR("Cannot update costmap since the mutex pointer is null");
     return;
   }
-  costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
+
+#if ROS_VERSION_MINOR > 11 // 11 == Indigo
+  costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getLock());
+#else
+  boost::shared_lock<boost::shared_mutex> lock(*costmap_->getLock());
+#endif
 
   // Initialize costmapMat_ directly with the unsigned char array of costmap_
   //costmap_mat_ = cv::Mat(costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY(), CV_8UC1,
@@ -351,7 +361,7 @@ void CostmapToDynamicObstacles::odomCallback(const nav_msgs::Odometry::ConstPtr&
   ego_vel_.z = vel.z();
 }
 
-void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig& config, uint32_t level)
+void CostmapToDynamicObstacles::reconfigureCB(CostmapToDynamicObstaclesConfig& config, uint32_t /*level*/)
 {
   publish_static_obstacles_ = config.publish_static_obstacles;
 
