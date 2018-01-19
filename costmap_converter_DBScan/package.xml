@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>costmap_converter_DBScan</name>
+  <version>0.0.7</version>
+  <description>
+    A ros package that includes plugins to convert occupied costmap2d cells to primitive types.
+    All methods are based on the DBScan clustering algorithm.
+  </description>
+
+  <maintainer email="christoph.roesmann@tu-dortmund.de">Christoph Rösmann</maintainer>
+
+  <author email="christoph.roesmann@tu-dortmund.de">Christoph Rösmann</author>
+  <author email="franz.albers@tu-dortmund.de">Franz Albers</author>
+  <author email="otniel.rinaldo@tu-dortmund.de">Otniel Rinaldo</author>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/costmap_converter</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>costmap_converter_core</depend>
+  <depend>dynamic_reconfigure</depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <costmap_converter plugin="${prefix}/plugins.xml" />
+  </export>
+</package>
