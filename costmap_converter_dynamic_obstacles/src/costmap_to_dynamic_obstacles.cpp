@@ -310,7 +310,7 @@ void CostmapToDynamicObstacles::updateCostmap2D()
   }
 
 #if ROS_VERSION_MINOR > 11 // 11 == Indigo
-  costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getLock());
+  costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
 #else
   boost::shared_lock<boost::shared_mutex> lock(*costmap_->getLock());
 #endif
