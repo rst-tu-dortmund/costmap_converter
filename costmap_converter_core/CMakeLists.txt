@@ -38,7 +38,6 @@ include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 ## Declare a cpp executable
 add_executable(costmap_converter_node src/costmap_converter_node.cpp)
 target_link_libraries(costmap_converter_node ${catkin_LIBRARIES})
-add_dependencies(costmap_converter_node ${PROJECT_NAME}_generate_messages_cpp)
 
 # Set required C++11 flag
 if(CMAKE_VERSION VERSION_LESS "3.1")
