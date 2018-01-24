@@ -24,6 +24,6 @@
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <costmap_converter plugin="${prefix}/plugins.xml" />
+    <costmap_converter_core plugin="${prefix}/plugins.xml" />
   </export>
 </package>

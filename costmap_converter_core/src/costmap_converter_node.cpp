@@ -51,7 +51,7 @@
 class CostmapStandaloneConversion
 {
 public:
-  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
+  CostmapStandaloneConversion() : converter_loader_("costmap_converter_core", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
 
       std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
