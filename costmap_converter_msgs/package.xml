@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>costmap_converter_msgs</name>
+  <version>0.0.7</version>
+  <description>
+    A ros package that defines the messages used by the package costmap_converter.
+  </description>
+
+  <maintainer email="christoph.roesmann@tu-dortmund.de">Christoph Rösmann</maintainer>
+
+  <author email="christoph.roesmann@tu-dortmund.de">Christoph Rösmann</author>
+  <author email="franz.albers@tu-dortmund.de">Franz Albers</author>
+  <author email="otniel.rinaldo@tu-dortmund.de">Otniel Rinaldo</author>
+
+  <license>BSD</license>
+
+  <url type="website">http://wiki.ros.org/costmap_converter</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>message_generation</build_depend>
+
+  <build_export_depend>message_runtime</build_export_depend>
+  <exec_depend>message_runtime</exec_depend>
+
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+
+</package>
