@@ -72,9 +72,8 @@ namespace costmap_converter {
  * @brief This class converts the costmap_2d into dynamic obstacles.
  *
  * Static obstacles are treated as point obstacles.
- * @todo allow different plugins for both static and dynamic obstacles (arbitrary combinations)
  */
-class CostmapToDynamicObstacles : public BaseCostmapToPolygons
+class CostmapToDynamicObstacles : public BaseCostmapToDynamicObstacles
 {
 public:
   /**

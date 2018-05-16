@@ -8,7 +8,7 @@ PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToDynamicObstacles, costmap_con
 namespace costmap_converter
 {
 
-CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToPolygons()
+CostmapToDynamicObstacles::CostmapToDynamicObstacles() : BaseCostmapToDynamicObstacles()
 {
   ego_vel_.x = ego_vel_.y = ego_vel_.z = 0;
   costmap_ = nullptr;
@@ -262,23 +262,58 @@ void CostmapToDynamicObstacles::compute()
     int height = bg_mat.rows;
     int stride = bg_mat.step;
 
-    for(int i = 0; i < height; i++)
+    if (stackedCostmapConversion())
     {
-      for(int j = 0; j < width; j++)
+      // Create new costmap with static obstacles (background)
+      boost::shared_ptr<costmap_2d::Costmap2D> static_costmap(new costmap_2d::Costmap2D(costmap_->getSizeInCellsX(),
+                                                                                        costmap_->getSizeInCellsY(),
+                                                                                        costmap_->getResolution(),
+                                                                                        costmap_->getOriginX(),
+                                                                                        costmap_->getOriginY()));
+      for(int i = 0; i < height; i++)
       {
-          uchar value = img_data[i * stride + j];
-          if (value > 0)
-          {
-            // obstacle found
-            obstacles->obstacles.emplace_back();
-            geometry_msgs::Point32 pt;
-            pt.x = (double)j*costmap_->getResolution() + costmap_->getOriginX();
-            pt.y = (double)i*costmap_->getResolution() + costmap_->getOriginY();
-            obstacles->obstacles.back().polygon.points.push_back(pt);
-            obstacles->obstacles.back().velocities.twist.linear.x = 0;
-            obstacles->obstacles.back().velocities.twist.linear.y = 0;
-            obstacles->obstacles.back().id = -1;
-          }
+        for(int j = 0; j < width; j++)
+        {
+          static_costmap->setCost(j, i, img_data[i * stride + j]);
+        }
+      }
+
+      // Apply static obstacle conversion plugin
+      setStaticCostmap(static_costmap);
+      convertStaticObstacles();
+
+      // Store converted static obstacles for publishing
+      auto static_polygons = getStaticPolygons();
+      for (auto it = static_polygons->begin(); it != static_polygons->end(); ++it)
+      {
+        obstacles->obstacles.emplace_back();
+        obstacles->obstacles.back().polygon = *it;
+        obstacles->obstacles.back().velocities.twist.linear.x = 0;
+        obstacles->obstacles.back().velocities.twist.linear.y = 0;
+        obstacles->obstacles.back().id = -1;
+      }
+    }
+    // Otherwise leave static obstacles point-shaped
+    else
+    {
+      for(int i = 0; i < height; i++)
+      {
+        for(int j = 0; j < width; j++)
+        {
+            uchar value = img_data[i * stride + j];
+            if (value > 0)
+            {
+              // obstacle found
+              obstacles->obstacles.emplace_back();
+              geometry_msgs::Point32 pt;
+              pt.x = (double)j*costmap_->getResolution() + costmap_->getOriginX();
+              pt.y = (double)i*costmap_->getResolution() + costmap_->getOriginY();
+              obstacles->obstacles.back().polygon.points.push_back(pt);
+              obstacles->obstacles.back().velocities.twist.linear.x = 0;
+              obstacles->obstacles.back().velocities.twist.linear.y = 0;
+              obstacles->obstacles.back().id = -1;
+            }
+        }
       }
     }
   }
