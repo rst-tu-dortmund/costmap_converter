@@ -2,6 +2,14 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Standalone converter subscribes now to costmap updates. Fixes `#1 <https://github.com/rst-tu-dortmund/costmap_converter/issues/1>`_
+* Adds radius field for circular obstacles to ObstacleMsg
+* Stacked costmap conversion (`#7 <https://github.com/rst-tu-dortmund/costmap_converter/issues/7>`_).
+  E.g., it is now possible combine a dynamic obstacle and static obstacle converter plugin.
+* Contributors: Christoph Rösmann, Franz Albers
+
 0.0.7 (2017-09-20)
 ------------------
 * Fixed some compilation issues (C++11 compiler flags and opencv2 on indigo/jade).
