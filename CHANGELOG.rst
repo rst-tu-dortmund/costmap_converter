@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.8 (2018-05-17)
+------------------
 * Standalone converter subscribes now to costmap updates. Fixes `#1 <https://github.com/rst-tu-dortmund/costmap_converter/issues/1>`_
 * Adds radius field for circular obstacles to ObstacleMsg
 * Stacked costmap conversion (`#7 <https://github.com/rst-tu-dortmund/costmap_converter/issues/7>`_).
