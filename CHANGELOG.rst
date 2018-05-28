@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.9 (2018-05-28)
+------------------
 * Moved plugin loader for static costmap conversion to BaseCostmapToDynamicObstacles.
   The corresponding ROS parameter `static_converter_plugin` is now defined in the CostmapToDynamicObstacles namespace. 
 * Contributors: Christoph Rösmann
