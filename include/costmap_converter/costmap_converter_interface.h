@@ -272,6 +272,35 @@ private:
 class BaseCostmapToDynamicObstacles : public BaseCostmapToPolygons
 {
 public:
+
+  /**
+   * @brief Load underlying static costmap conversion plugin via plugin-loader
+   * @param plugin_name Exact class name of the plugin to be loaded, e.g.
+   *                    costmap_converter::CostmapToPolygonsDBSMCCH
+   * @param nh_parent   NodeHandle which is extended by the namespace of the static conversion plugin
+   */
+  void loadStaticCostmapConverterPlugin(const std::string& plugin_name, ros::NodeHandle nh_parent)
+  {
+    try
+    {
+      static_costmap_converter_ = static_converter_loader_.createInstance(plugin_name);
+
+      if(boost::dynamic_pointer_cast<BaseCostmapToDynamicObstacles>(static_costmap_converter_))
+      {
+        throw pluginlib::PluginlibException("The specified plugin for static costmap conversion is a dynamic plugin. Specify a static plugin.");
+      }
+      std::string raw_plugin_name = static_converter_loader_.getName(plugin_name);
+      static_costmap_converter_->initialize(ros::NodeHandle(nh_parent, raw_plugin_name));
+      setStaticCostmapConverterPlugin(static_costmap_converter_);
+      ROS_INFO_STREAM("CostmapToDynamicObstacles: underlying costmap conversion plugin for static obstacles " << plugin_name << " loaded.");
+    }
+    catch(const pluginlib::PluginlibException& ex)
+    {
+      ROS_WARN("CostmapToDynamicObstacles: The specified costmap converter plugin cannot be loaded. Continuing without subsequent conversion of static obstacles. Error message: %s", ex.what());
+      static_costmap_converter_.reset();
+    }
+  }
+
   /**
    * @brief Set the underlying plugin for subsequent costmap conversion of the static background of the costmap
    * @param static_costmap_converter shared pointer to the static costmap conversion plugin
@@ -324,9 +353,10 @@ protected:
   /**
    * @brief Protected constructor that should be called by subclasses
    */
-  BaseCostmapToDynamicObstacles() : static_costmap_converter_() {}
+  BaseCostmapToDynamicObstacles() : static_converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), static_costmap_converter_() {}
 
 private:
+  pluginlib::ClassLoader<BaseCostmapToPolygons> static_converter_loader_;
   boost::shared_ptr<BaseCostmapToPolygons> static_costmap_converter_;
 };
 

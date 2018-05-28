@@ -46,6 +46,7 @@
 // ROS
 #include <costmap_converter/costmap_converter_interface.h>
 #include <nav_msgs/Odometry.h>
+#include <pluginlib/class_loader.h>
 #include <ros/ros.h>
 
 // OpenCV

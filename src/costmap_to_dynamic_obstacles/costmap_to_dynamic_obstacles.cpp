@@ -127,6 +127,14 @@ void CostmapToDynamicObstacles::initialize(ros::NodeHandle nh)
 
   tracker_ = std::unique_ptr<CTracker>(new CTracker(tracker_params));
 
+
+  ////////////////////////////////////
+  // Static costmap conversion parameters
+  std::string static_converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
+  nh.param("static_converter_plugin", static_converter_plugin, static_converter_plugin);
+  loadStaticCostmapConverterPlugin(static_converter_plugin, nh);
+
+
   // setup dynamic reconfigure
   dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>(nh);
   dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>::CallbackType cb = boost::bind(&CostmapToDynamicObstacles::reconfigureCB, this, _1, _2);
