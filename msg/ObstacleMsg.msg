@@ -22,3 +22,6 @@ geometry_msgs/Quaternion orientation
 # Individual velocities (centroid)
 geometry_msgs/TwistWithCovariance velocities
 
+# Prediction of the obstacle's future motion (optional)
+# Individual time stamps are defined in the headers of the underlying poses
+nav_msgs/Path prediction
