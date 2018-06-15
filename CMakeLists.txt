@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   roscpp
   std_msgs
+  nav_msgs
   message_generation
   costmap_2d
   dynamic_reconfigure
@@ -94,7 +95,7 @@ add_message_files(
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
-   geometry_msgs std_msgs
+   geometry_msgs std_msgs nav_msgs
 )
 
 #add dynamic reconfigure api
@@ -124,6 +125,7 @@ catkin_package(
     pluginlib
     roscpp 
     std_msgs
+    nav_msgs
     message_runtime 
     dynamic_reconfigure
     costmap_2d
