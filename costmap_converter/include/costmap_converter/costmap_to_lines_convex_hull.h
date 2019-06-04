@@ -43,7 +43,7 @@
 #include <costmap_converter/costmap_to_polygons.h>
 
 // dynamic reconfigure
-#include <costmap_converter/CostmapToLinesDBSMCCHConfig.h>
+//#include <costmap_converter/CostmapToLinesDBSMCCHConfig.h>
 
 namespace costmap_converter
 {
@@ -84,7 +84,7 @@ namespace costmap_converter
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(ros::NodeHandle nh);
+    virtual void initialize(rclcpp::Node::SharedPtr nh);
     
     /**
      * @brief This method performs the actual work (conversion of the costmap to polygons)
@@ -100,7 +100,7 @@ namespace costmap_converter
      * @param polygon convex hull of the cluster \c cluster
      * @param[out] lines back_inserter object to a sequence of polygon msgs (new lines will be pushed back)
      */
-    void extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon, std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines);
+    void extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::msg::Polygon& polygon, std::back_insert_iterator< std::vector<geometry_msgs::msg::Polygon> > lines);
 
     
     
@@ -119,9 +119,9 @@ namespace costmap_converter
      * @param config Reference to the dynamic reconfigure config
      * @param level Dynamic reconfigure level
      */
-    void reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level);
+//    void reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level);
     
-    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime   
+//    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime
  
   };  
   

@@ -37,47 +37,45 @@
  *********************************************************************/
 
 #include <costmap_converter/costmap_to_polygons.h>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToPolygonsDBSMCCH, costmap_converter::BaseCostmapToPolygons)
 
 namespace costmap_converter
 {
-    
+
 CostmapToPolygonsDBSMCCH::CostmapToPolygonsDBSMCCH() : BaseCostmapToPolygons()
 {
   costmap_ = NULL;
-  dynamic_recfg_ = NULL;
+//  dynamic_recfg_ = NULL;
 }
 
-CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH() 
+CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH()
 {
-  if (dynamic_recfg_ != NULL)
-    delete dynamic_recfg_;
+//  if (dynamic_recfg_ != NULL)
+//    delete dynamic_recfg_;
 }
 
-void CostmapToPolygonsDBSMCCH::initialize(ros::NodeHandle nh)
+void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 {
     costmap_ = NULL;
-   
-    max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", max_distance_, max_distance_);
-    
+
+    max_distance_ = 0.4;
+    nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);
+
     min_pts_ = 2;
-    nh.param("cluster_min_pts", min_pts_, min_pts_);
-    
+    nh->get_parameter_or<int>("cluster_min_pts", min_pts_, min_pts_);
+
     max_pts_ = 30;
-    nh.param("cluster_max_pts", max_pts_, max_pts_);
-    
+    nh->get_parameter_or<int>("cluster_max_pts", max_pts_, max_pts_);
+
     min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
-    
+    nh->get_parameter_or<double>("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+
     // setup dynamic reconfigure
-    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>(nh);
-    dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToPolygonsDBSMCCH::reconfigureCB, this, _1, _2);
-    dynamic_recfg_->setCallback(cb);
+//    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>(nh);
+//    dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToPolygonsDBSMCCH::reconfigureCB, this, _1, _2);
+//    dynamic_recfg_->setCallback(cb);
 }
 
 
@@ -85,63 +83,63 @@ void CostmapToPolygonsDBSMCCH::compute()
 {
     std::vector< std::vector<KeyPoint> > clusters;
     dbScan(occupied_cells_, clusters);
-    
+
     // Create new polygon container
-    PolygonContainerPtr polygons(new std::vector<geometry_msgs::Polygon>());
-    
-    
+    PolygonContainerPtr polygons(new std::vector<geometry_msgs::msg::Polygon>());
+
+
     // add convex hulls to polygon container
     for (std::size_t i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
-      polygons->push_back( geometry_msgs::Polygon() );
+      polygons->push_back( geometry_msgs::msg::Polygon() );
       convexHull2(clusters[i], polygons->back() );
     }
-    
+
     // add our non-cluster points to the polygon container (as single points)
     if (!clusters.empty())
     {
       for (std::size_t i=0; i < clusters.front().size(); ++i)
       {
-        polygons->push_back( geometry_msgs::Polygon() );
+        polygons->push_back( geometry_msgs::msg::Polygon() );
         convertPointToPolygon(clusters.front()[i], polygons->back());
       }
     }
-    
+
     // replace shared polygon container
     updatePolygonContainer(polygons);
 }
 
-void CostmapToPolygonsDBSMCCH::setCostmap2D(costmap_2d::Costmap2D *costmap)
+void CostmapToPolygonsDBSMCCH::setCostmap2D(nav2_costmap_2d::Costmap2D *costmap)
 {
     if (!costmap)
       return;
 
-    costmap_ = costmap;     
-    
+    costmap_ = costmap;
+
     updateCostmap2D();
 }
 
 void CostmapToPolygonsDBSMCCH::updateCostmap2D()
 {
       occupied_cells_.clear();
-      
+
       if (!costmap_->getMutex())
       {
-        ROS_ERROR("Cannot update costmap since the mutex pointer is null");
+        RCLCPP_ERROR(getLogger(), "Cannot update costmap since the mutex pointer is null");
         return;
       }
-      
+
       int idx = 0;
-      
-      costmap_2d::Costmap2D::mutex_t::scoped_lock lock(*costmap_->getMutex());
-            
+
+      std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*costmap_->getMutex());
+
       // get indices of obstacle cells
       for(std::size_t i = 0; i < costmap_->getSizeInCellsX(); i++)
       {
         for(std::size_t j = 0; j < costmap_->getSizeInCellsY(); j++)
         {
           int value = costmap_->getCost(i,j);
-          if(value >= costmap_2d::LETHAL_OBSTACLE)
+          if(value >= nav2_costmap_2d::LETHAL_OBSTACLE)
           {
             double x, y;
             costmap_->mapToWorld((unsigned int)i, (unsigned int)j, x, y);
@@ -157,8 +155,8 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
 {
   std::vector<bool> visited(occupied_cells.size(), false);
 
-  clusters.clear();  
-  
+  clusters.clear();
+
   //DB Scan Algorithm
   int cluster_id = 0; // current cluster_id
   clusters.push_back(std::vector<KeyPoint>());
@@ -170,28 +168,28 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
       std::vector<int> neighbors;
       regionQuery(occupied_cells, i, neighbors); //Find neighbors around the keypoint
       if((int)neighbors.size() < min_pts_) //If not enough neighbors are found, mark as noise
-      {		
+      {
         clusters[0].push_back(occupied_cells[i]);
       }
       else
       {
         ++cluster_id; // increment current cluster_id
         clusters.push_back(std::vector<KeyPoint>());
-        
+
         // Expand the cluster
         clusters[cluster_id].push_back(occupied_cells[i]);
         for(int j = 0; j<(int)neighbors.size(); j++)
         {
           if ((int)clusters[cluster_id].size() == max_pts_)
             break;
-          
+
           if(!visited[neighbors[j]]) //keypoint has not been visited before
           {
             visited[neighbors[j]] = true;  // mark as visited
             std::vector<int> further_neighbors;
             regionQuery(occupied_cells, neighbors[j], further_neighbors); //Find more neighbors around the new keypoint
 //             if(further_neighbors.size() < min_pts_)
-//             {	  
+//             {
 //               clusters[0].push_back(occupied_cells[neighbors[j]]);
 //             }
 //             else
@@ -203,11 +201,11 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
             }
           }
         }
-      }	      
+      }
     }
-  } 
+  }
 }
-  
+
 void CostmapToPolygonsDBSMCCH::regionQuery(const std::vector<KeyPoint>& occupied_cells, int curr_index, std::vector<int>& neighbors)
 {
     neighbors.clear();
@@ -229,31 +227,31 @@ bool isXCoordinateSmaller(const CostmapToPolygonsDBSMCCH::KeyPoint& p1, const Co
   return p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y);
 }
 
-void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon)
+void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geometry_msgs::msg::Polygon& polygon)
 {
     //Monotone Chain ConvexHull Algorithm source from http://www.algorithmist.com/index.php/Monotone_Chain_Convex_Hull
-  
+
     int k = 0;
     int n = cluster.size();
-    
+
     // sort points according to x coordinate (TODO. is it already sorted due to the map representation?)
     std::sort(cluster.begin(), cluster.end(), isXCoordinateSmaller);
-    
+
     polygon.points.resize(2*n);
-      
+
     // lower hull
     for (int i = 0; i < n; ++i)
     {
-      while (k >= 2 && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0) 
+      while (k >= 2 && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0)
       {
         --k;
       }
       cluster[i].toPointMsg(polygon.points[k]);
       ++k;
     }
-      
-    // upper hull  
-    for (int i = n-2, t = k+1; i >= 0; --i) 
+
+    // upper hull
+    for (int i = n-2, t = k+1; i >= 0; --i)
     {
       while (k >= t && cross(polygon.points[k-2], polygon.points[k-1], cluster[i]) <= 0)
       {
@@ -262,14 +260,14 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
       cluster[i].toPointMsg(polygon.points[k]);
       ++k;
     }
-    
+
 
     polygon.points.resize(k); // original
     // TEST we skip the last point, since in our definition the polygon vertices do not contain the start/end vertex twice.
 //     polygon.points.resize(k-1); // TODO remove last point from the algorithm above to reduce computational cost
 
-    
-    
+
+
     if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
     {
       for (int i=0; i < (int) polygon.points.size() - 1; ++i)
@@ -282,15 +280,15 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
 
 
 
-void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon)
+void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::msg::Polygon& polygon)
 {
     std::vector<KeyPoint> P = cluster;
-    std::vector<geometry_msgs::Point32>& points = polygon.points;
+    std::vector<geometry_msgs::msg::Point32>& points = polygon.points;
 
     // Sort P by x and y
     for (int i = 0; i < (int)P.size(); i++)
     {
-        for (int j = i + 1; j < (int)P.size(); j++) 
+        for (int j = i + 1; j < (int)P.size(); j++)
         {
             if (P[j].x < P[i].x || (P[j].x == P[i].x && P[j].y < P[i].y))
             {
@@ -312,15 +310,15 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
     minmax = i - 1;
     if (minmax == (int)P.size() - 1)
     {   // degenerate case: all x-coords == xmin
-        points.push_back(geometry_msgs::Point32());
+        points.push_back(geometry_msgs::msg::Point32());
         P[minmin].toPointMsg(points.back());
         if (P[minmax].y != P[minmin].y) // a  nontrivial segment
         {
-            points.push_back(geometry_msgs::Point32());
+            points.push_back(geometry_msgs::msg::Point32());
             P[minmax].toPointMsg(points.back());
         }
         // add polygon endpoint
-        points.push_back(geometry_msgs::Point32());
+        points.push_back(geometry_msgs::msg::Point32());
         P[minmin].toPointMsg(points.back());
         return;
     }
@@ -334,7 +332,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
 
     // Compute the lower hull on the stack H
     // push  minmin point onto stack
-    points.push_back(geometry_msgs::Point32());
+    points.push_back(geometry_msgs::msg::Point32());
     P[minmin].toPointMsg(points.back());
     i = minmax;
     while (++i <= maxmin)
@@ -351,7 +349,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
             points.pop_back();         // pop top point off  stack
         }
         // push P[i] onto stack
-        points.push_back(geometry_msgs::Point32());
+        points.push_back(geometry_msgs::msg::Point32());
         P[i].toPointMsg(points.back());
     }
 
@@ -359,7 +357,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
     if (maxmax != maxmin)      // if  distinct xmax points
     {
          // push maxmax point onto stack
-         points.push_back(geometry_msgs::Point32());
+         points.push_back(geometry_msgs::msg::Point32());
          P[maxmax].toPointMsg(points.back());
     }
     int bot = (int)points.size();                  // the bottom point of the upper hull stack
@@ -378,16 +376,16 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
             points.pop_back();         // pop top point off stack
         }
         // push P[i] onto stack
-        points.push_back(geometry_msgs::Point32());
+        points.push_back(geometry_msgs::msg::Point32());
         P[i].toPointMsg(points.back());
     }
     if (minmax != minmin)
     {
         // push  joining endpoint onto stack
-        points.push_back(geometry_msgs::Point32());
+        points.push_back(geometry_msgs::msg::Point32());
         P[minmin].toPointMsg(points.back());
     }
-    
+
     if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
     {
       for (int i=0; i < (int) polygon.points.size() - 1; ++i)
@@ -400,25 +398,25 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
 
 void CostmapToPolygonsDBSMCCH::updatePolygonContainer(PolygonContainerPtr polygons)
 {
-  boost::mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   polygons_ = polygons;
 }
 
 
 PolygonContainerConstPtr CostmapToPolygonsDBSMCCH::getPolygons()
 {
-  boost::mutex::scoped_lock lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   PolygonContainerConstPtr polygons = polygons_;
   return polygons;
 }
 
-void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level)
-{
-    max_distance_ = config.cluster_max_distance;
-    min_pts_ = config.cluster_min_pts;
-    max_pts_ = config.cluster_max_pts;
-    min_keypoint_separation_ = config.cluster_min_pts;
-}
+//void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level)
+//{
+//    max_distance_ = config.cluster_max_distance;
+//    min_pts_ = config.cluster_min_pts;
+//    max_pts_ = config.cluster_max_pts;
+//    min_keypoint_separation_ = config.cluster_min_pts;
+//}
 
 }//end namespace costmap_converter
 

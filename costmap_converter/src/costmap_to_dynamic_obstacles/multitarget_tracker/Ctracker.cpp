@@ -82,7 +82,7 @@ void CTracker::Update(const std::vector<Point_t>& detectedCentroid, const std::v
     // -----------------------------------
     for (int i = 0; i < static_cast<int>(tracks.size()); i++)
     {
-      if (tracks[i]->skipped_frames > params.max_allowed_skipped_frames)
+      if ((int)tracks[i]->skipped_frames > params.max_allowed_skipped_frames)
       {
         tracks.erase(tracks.begin() + i);
         assignment.erase(assignment.begin() + i);

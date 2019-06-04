@@ -39,22 +39,20 @@
 #ifndef COSTMAP_TO_POLYGONS_H_
 #define COSTMAP_TO_POLYGONS_H_
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <costmap_converter/costmap_converter_interface.h>
-#include <nav_msgs/OccupancyGrid.h>
-#include <visualization_msgs/Marker.h>
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/Polygon.h>
+#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/polygon.hpp>
 #include <vector>
 #include <algorithm>
 #include <Eigen/Core>
 #include <Eigen/StdVector>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
 
 // dynamic reconfigure
-#include <costmap_converter/CostmapToPolygonsDBSMCCHConfig.h>
-#include <dynamic_reconfigure/server.h>
+//#include <costmap_converter/CostmapToPolygonsDBSMCCHConfig.h>
+//#include <dynamic_reconfigure/server.h>
 
 
 namespace costmap_converter
@@ -93,10 +91,10 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
       double x; //!< x coordinate [m]
       double y; //!< y coordinate [m]
       
-      //! Convert keypoint to geometry_msgs::Point message type
-      void toPointMsg(geometry_msgs::Point& point) const {point.x=x; point.y=y; point.z=0;}
-      //! Convert keypoint to geometry_msgs::Point32 message type
-      void toPointMsg(geometry_msgs::Point32& point) const {point.x=x; point.y=y; point.z=0;}
+      //! Convert keypoint to geometry_msgs::msg::Point message type
+      void toPointMsg(geometry_msgs::msg::Point& point) const {point.x=x; point.y=y; point.z=0;}
+      //! Convert keypoint to geometry_msgs::msg::Point32 message type
+      void toPointMsg(geometry_msgs::msg::Point32& point) const {point.x=x; point.y=y; point.z=0;}
     };
     
     
@@ -114,7 +112,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(ros::NodeHandle nh);
+    virtual void initialize(rclcpp::Node::SharedPtr nh) override;
     
     /**
      * @brief This method performs the actual work (conversion of the costmap to polygons)
@@ -126,7 +124,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @sa updateCostmap2D
      * @param costmap Pointer to the costmap2d source
      */
-    virtual void setCostmap2D(costmap_2d::Costmap2D* costmap);
+    virtual void setCostmap2D(nav2_costmap_2d::Costmap2D* costmap);
     
     /**
      * @brief Get updated data from the previously set Costmap2D
@@ -136,13 +134,13 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
     
     
     /**
-     * @brief Convert a generi point type to a geometry_msgs::Polygon
+     * @brief Convert a generi point type to a geometry_msgs::msg::Polygon
      * @param point generic 2D point type
      * @param[out] polygon already instantiated polygon that will be filled with a single point
      * @tparam Point generic point type that should provide (writable) x and y member fiels.
      */
     template< typename Point>
-    static void convertPointToPolygon(const Point& point, geometry_msgs::Polygon& polygon)
+    static void convertPointToPolygon(const Point& point, geometry_msgs::msg::Polygon& polygon)
     {
       polygon.points.resize(1);
       polygon.points.front().x = point.x;
@@ -197,7 +195,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @param cluster list of keypoints that should be converted into a polygon
      * @param[out] polygon the resulting convex polygon
      */  
-    void convexHull(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon);
+    void convexHull(std::vector<KeyPoint>& cluster, geometry_msgs::msg::Polygon& polygon);
     
     /**
      * @brief Compute the convex hull for a single cluster
@@ -212,7 +210,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @param[out] polygon the resulting convex polygon
      * @todo Evaluate and figure out whether convexHull() or convexHull2() is better suited (performance, quality, ...)
      */  
-    void convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon);
+    void convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::msg::Polygon& polygon);
     
    /**
     * @brief 2D Cross product of two vectors defined by two points and a common origin
@@ -256,15 +254,15 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @param config Reference to the dynamic reconfigure config
      * @param level Dynamic reconfigure level
      */
-    void reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level);
+    //void reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level);
     
     
     PolygonContainerPtr polygons_; //!< Current shared container of polygons
-    boost::mutex mutex_; //!< Mutex that keeps track about the ownership of the shared polygon instance
+    std::mutex mutex_; //!< Mutex that keeps track about the ownership of the shared polygon instance
     
-    dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime    
+    //dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime
    
-    costmap_2d::Costmap2D *costmap_; //!< Pointer to the costmap2d
+    nav2_costmap_2d::Costmap2D *costmap_; //!< Pointer to the costmap2d
    
 }; 
 

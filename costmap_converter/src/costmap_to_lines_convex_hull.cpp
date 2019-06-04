@@ -38,9 +38,7 @@
 
 #include <costmap_converter/costmap_to_lines_convex_hull.h>
 #include <costmap_converter/misc.h>
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToLinesDBSMCCH, costmap_converter::BaseCostmapToPolygons)
 
@@ -49,51 +47,52 @@ namespace costmap_converter
 
 CostmapToLinesDBSMCCH::CostmapToLinesDBSMCCH() : CostmapToPolygonsDBSMCCH() 
 {
-    dynamic_recfg_ = NULL;
+//    dynamic_recfg_ = NULL;
 }
   
 CostmapToLinesDBSMCCH::~CostmapToLinesDBSMCCH() 
 {
-  if (dynamic_recfg_ != NULL)
-    delete dynamic_recfg_;
+//  if (dynamic_recfg_ != NULL)
+//    delete dynamic_recfg_;
 }
   
-void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
+void CostmapToLinesDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 { 
     // DB SCAN
     max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", max_distance_, max_distance_);
+    nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);
     
     min_pts_ = 2;
-    nh.param("cluster_min_pts", min_pts_, min_pts_);
+    nh->get_parameter_or<int>("cluster_min_pts", min_pts_, min_pts_);
     
     max_pts_ = 30;
-    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    nh->get_parameter_or<int>("cluster_max_pts", max_pts_, max_pts_);
     
     // convex hull
     min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    nh->get_parameter_or<double>("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
     // Line extraction
     support_pts_max_dist_ = 0.3;
-    nh.param("support_pts_max_dist", support_pts_max_dist_, support_pts_max_dist_);
+    nh->get_parameter_or<double>("support_pts_max_dist", support_pts_max_dist_, support_pts_max_dist_);
     
     support_pts_max_dist_inbetween_ = 1.0;
-    nh.param("support_pts_max_dist_inbetween", support_pts_max_dist_inbetween_, support_pts_max_dist_inbetween_);
+    nh->get_parameter_or<double>("support_pts_max_dist_inbetween", support_pts_max_dist_inbetween_, support_pts_max_dist_inbetween_);
     
     min_support_pts_ = 2;
-    nh.param("min_support_pts", min_support_pts_, min_support_pts_);
+    nh->get_parameter_or<int>("min_support_pts", min_support_pts_, min_support_pts_);
     
     // setup dynamic reconfigure
-    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>(nh);
-    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToLinesDBSMCCH::reconfigureCB, this, _1, _2);
-    dynamic_recfg_->setCallback(cb);
+//    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>(nh);
+//    dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>::CallbackType cb = boost::bind(&CostmapToLinesDBSMCCH::reconfigureCB, this, _1, _2);
+//    dynamic_recfg_->setCallback(cb);
     
     // deprecated
-    if (nh.hasParam("support_pts_min_dist_") || nh.hasParam("support_pts_min_dist"))
-      ROS_WARN("CostmapToLinesDBSMCCH: Parameter 'support_pts_min_dist' is deprecated and not included anymore.");
-    if (nh.hasParam("min_support_pts_"))
-      ROS_WARN("CostmapToLinesDBSMCCH: Parameter 'min_support_pts_' is not found. Remove the underscore.");
+    rclcpp::Parameter dummy;
+    if (nh->get_parameter("support_pts_min_dist_", dummy) || nh->get_parameter("support_pts_min_dist", dummy))
+      RCLCPP_WARN(nh->get_logger(), "CostmapToLinesDBSMCCH: Parameter 'support_pts_min_dist' is deprecated and not included anymore.");
+    if (nh->get_parameter("min_support_pts_", dummy))
+      RCLCPP_WARN(nh->get_logger(), "CostmapToLinesDBSMCCH: Parameter 'min_support_pts_' is not found. Remove the underscore.");
 }  
   
 void CostmapToLinesDBSMCCH::compute()
@@ -102,13 +101,13 @@ void CostmapToLinesDBSMCCH::compute()
     dbScan(occupied_cells_, clusters);
     
     // Create new polygon container
-    PolygonContainerPtr polygons(new std::vector<geometry_msgs::Polygon>());  
+    PolygonContainerPtr polygons(new std::vector<geometry_msgs::msg::Polygon>());  
     
     
     // add convex hulls to polygon container
-    for (int i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
+    for (size_t i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
-      geometry_msgs::Polygon polygon;
+      geometry_msgs::msg::Polygon polygon;
       convexHull2(clusters[i], polygon );
       
       // now extract lines of the polygon (by searching for support points in the cluster)  
@@ -119,9 +118,9 @@ void CostmapToLinesDBSMCCH::compute()
     // add our non-cluster points to the polygon container (as single points)
     if (!clusters.empty())
     {
-      for (int i=0; i < clusters.front().size(); ++i)
+      for (size_t i=0; i < clusters.front().size(); ++i)
       {
-        polygons->push_back( geometry_msgs::Polygon() );
+        polygons->push_back( geometry_msgs::msg::Polygon() );
         convertPointToPolygon(clusters.front()[i], polygons->back());
       }
     }
@@ -136,8 +135,8 @@ bool sort_keypoint_x(const std::size_t& i, const std::size_t& j, const std::vect
 bool sort_keypoint_y(const std::size_t& i, const std::size_t& j, const std::vector<CL::KeyPoint>& cluster) 
 { return (cluster[i].y<cluster[j].y) || (cluster[i].y == cluster[j].y && cluster[i].x < cluster[j].x); }
 
-void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::Polygon& polygon,
-                                                  std::back_insert_iterator< std::vector<geometry_msgs::Polygon> > lines)
+void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster, const geometry_msgs::msg::Polygon& polygon,
+                                                  std::back_insert_iterator< std::vector<geometry_msgs::msg::Polygon> > lines)
 {
    if (polygon.points.empty())
      return;
@@ -151,8 +150,8 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
      
    for (int i=1; i<n; ++i) // this implemenation requires an explicitly closed polygon (start vertex = end vertex)
    {
-        const geometry_msgs::Point32* vertex1 = &polygon.points[i-1];
-        const geometry_msgs::Point32* vertex2 = &polygon.points[i];
+        const geometry_msgs::msg::Point32* vertex1 = &polygon.points[i-1];
+        const geometry_msgs::msg::Point32* vertex2 = &polygon.points[i];
 
         // check how many vertices belong to the line (sometimes the convex hull algorithm finds multiple vertices on a line,
         // in case of small coordinate deviations)
@@ -163,7 +162,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
 //         dy /= norm;
 //         for (int j=i; j<(int)polygon.points.size() - 2; ++j)
 //         {
-//           const geometry_msgs::Point32* vertex_jp2 = &polygon.points[j+2];
+//           const geometry_msgs::msg::Point32* vertex_jp2 = &polygon.points[j+2];
 //           double dx2 = vertex_jp2->x - vertex2->x;
 //           double dy2 = vertex_jp2->y - vertex2->y;
 //           double norm2 = std::sqrt(dx2*dx2 + dy2*dy2);
@@ -201,9 +200,9 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
           {          
             // sort points
             if (std::abs(dx) >= std::abs(dy))
-              std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_x, _1, _2, boost::cref(cluster)));
+              std::sort(support_points.begin(), support_points.end(), std::bind(sort_keypoint_x, std::placeholders::_1, std::placeholders::_2, std::cref(cluster)));
             else 
-              std::sort(support_points.begin(), support_points.end(), boost::bind(sort_keypoint_y, _1, _2, boost::cref(cluster)));
+              std::sort(support_points.begin(), support_points.end(), std::bind(sort_keypoint_y, std::placeholders::_1, std::placeholders::_2, std::cref(cluster)));
             
             // now calculate distances
             for (int k = 1; k < int(support_points.size()); ++k)
@@ -226,7 +225,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
         if (is_line)
         {
           // line found:
-          geometry_msgs::Polygon line;
+          geometry_msgs::msg::Polygon line;
           line.points.push_back(*vertex1);
           line.points.push_back(*vertex2);
           lines = line; // back insertion
@@ -245,14 +244,14 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
             //support_points.pop_back();
           // old:
 //             // add vertex 1 as single point
-//             geometry_msgs::Polygon point;
+//             geometry_msgs::msg::Polygon point;
 //             point.points.push_back(*vertex1);
 //             lines = point; // back insertion
 
            // add complete inlier set as points 
 //            for (int k = 0; k < int(support_points.size()); ++k)
 //            {
-//               geometry_msgs::Polygon polygon;
+//               geometry_msgs::msg::Polygon polygon;
 //               convertPointToPolygon(cluster[support_points[k]], polygon);
 //               lines = polygon; // back insertion
 //            }
@@ -262,7 +261,7 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
           std::vector<std::size_t>::reverse_iterator support_it = support_points.rbegin();
           for (; support_it != support_points.rend(); ++support_it)
           {
-            geometry_msgs::Polygon polygon;
+            geometry_msgs::msg::Polygon polygon;
             convertPointToPolygon(cluster[*support_it], polygon);
             lines = polygon; // back insertion
             
@@ -274,23 +273,23 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
     // add all remaining cluster points, that do not belong to a line
     for (int i=0; i<(int)cluster.size();++i)
     {
-        geometry_msgs::Polygon polygon;
+        geometry_msgs::msg::Polygon polygon;
         convertPointToPolygon(cluster[i], polygon);
         lines = polygon; // back insertion
     }
 
 }
 
-void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level)
-{
-    max_distance_ = config.cluster_max_distance;
-    min_pts_ = config.cluster_min_pts;
-    max_pts_ = config.cluster_max_pts;
-    min_keypoint_separation_ = config.cluster_min_pts;
-    support_pts_max_dist_ = config.support_pts_max_dist;
-    support_pts_max_dist_inbetween_ = config.support_pts_max_dist_inbetween;
-    min_support_pts_ = config.min_support_pts;
-}
+//void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level)
+//{
+//    max_distance_ = config.cluster_max_distance;
+//    min_pts_ = config.cluster_min_pts;
+//    max_pts_ = config.cluster_max_pts;
+//    min_keypoint_separation_ = config.cluster_min_pts;
+//    support_pts_max_dist_ = config.support_pts_max_dist;
+//    support_pts_max_dist_inbetween_ = config.support_pts_max_dist_inbetween;
+//    min_support_pts_ = config.min_support_pts;
+//}
 
 
 
