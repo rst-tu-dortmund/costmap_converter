@@ -1,4 +1,4 @@
-<library path="/libcostmap_converter">
+<library path="costmap_converter">
   
   <class type="costmap_converter::CostmapToPolygonsDBSMCCH" base_class_type="costmap_converter::BaseCostmapToPolygons">
   <description>

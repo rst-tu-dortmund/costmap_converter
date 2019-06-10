@@ -83,7 +83,9 @@ public:
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(rclcpp::Node::SharedPtr nh) = 0;
+    virtual void initialize(rclcpp::Node::SharedPtr nh) {
+      nh_ = nh;
+    }
     
     /**
      * @brief Destructor
@@ -175,7 +177,7 @@ public:
       * @param costmap Pointer to the underlying costmap (must be valid and lockable as long as the worker is active
       * @param spin_thread if \c true,the timer is invoked in a separate thread, otherwise in the default callback queue)
      */
-    void startWorker(rclcpp::Rate rate, nav2_costmap_2d::Costmap2D* costmap, bool spin_thread = false)
+    void startWorker(rclcpp::Rate::SharedPtr rate, nav2_costmap_2d::Costmap2D* costmap, bool spin_thread = false)
     {
       setCostmap2D(costmap);
       
@@ -196,7 +198,7 @@ public:
         spin_thread_ = new std::thread(std::bind(&BaseCostmapToPolygons::spinThread, this));
         callback_group_ = nh_->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
         worker_timer_ = nh_->create_wall_timer(
-                    rate.period(),
+                    rate->period(),
                     std::bind(&BaseCostmapToPolygons::workerCallback, this),
                     callback_group_);
       }
@@ -204,7 +206,7 @@ public:
       {
         spin_thread_ = NULL;
         worker_timer_ = nh_->create_wall_timer(
-                    rate.period(),
+                    rate->period(),
                     std::bind(&BaseCostmapToPolygons::workerCallback, this));
       }
     }

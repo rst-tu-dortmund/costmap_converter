@@ -58,6 +58,8 @@ CostmapToLinesDBSMCCH::~CostmapToLinesDBSMCCH()
   
 void CostmapToLinesDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 { 
+    BaseCostmapToPolygons::initialize(nh);
+    
     // DB SCAN
     max_distance_ = 0.4; 
     nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);

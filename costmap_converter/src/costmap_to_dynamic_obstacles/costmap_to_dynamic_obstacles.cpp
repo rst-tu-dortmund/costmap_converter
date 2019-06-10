@@ -25,6 +25,8 @@ CostmapToDynamicObstacles::~CostmapToDynamicObstacles()
 
 void CostmapToDynamicObstacles::initialize(rclcpp::Node::SharedPtr nh)
 {
+  BaseCostmapToPolygons::initialize(nh);
+  
   costmap_ = nullptr;
 
   // We need the odometry from the robot to compensate the ego motion

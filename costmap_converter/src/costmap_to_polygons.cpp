@@ -58,6 +58,8 @@ CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH()
 
 void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 {
+    BaseCostmapToPolygons::initialize(nh);
+    
     costmap_ = NULL;
 
     max_distance_ = 0.4;
