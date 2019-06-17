@@ -54,120 +54,79 @@ public:
       : rclcpp::Node(node_name),
         converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons")
   {
-      n_ = std::shared_ptr<rclcpp::Node>(this, [](rclcpp::Node *) {});
-      // load converter plugin from parameter server, otherwise set default
-      std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
-      get_parameter_or<std::string>("converter_plugin", converter_plugin, converter_plugin);
+    costmap_ros_ = std::make_shared<nav2_costmap_2d::Costmap2DROS>("converter_costmap");
+    costmap_thread_ = std::make_unique<std::thread>(
+    [](rclcpp_lifecycle::LifecycleNode::SharedPtr node)
+    {rclcpp::spin(node->get_node_base_interface());}, costmap_ros_);
+    rclcpp_lifecycle::State state;
+    costmap_ros_->on_configure(state);
+    costmap_ros_->on_activate(state);
 
-      try
-      {
-        converter_ = converter_loader_.createSharedInstance(converter_plugin);
-      }
-      catch(const pluginlib::PluginlibException& ex)
-      {
-        RCLCPP_ERROR(get_logger(), "The plugin failed to load for some reason. Error: %s", ex.what());
-        rclcpp::shutdown();
-        return;
-      }
+    n_ = std::shared_ptr<rclcpp::Node>(this, [](rclcpp::Node *) {});
+    // load converter plugin from parameter server, otherwise set default
+    
+    std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
 
-      RCLCPP_INFO(get_logger(), "Standalone costmap converter: %s loaded.", converter_plugin.c_str());
+    declare_parameter("converter_plugin", rclcpp::ParameterValue(converter_plugin));
+    
+    get_parameter_or<std::string>("converter_plugin", converter_plugin, converter_plugin);
 
-      std::string costmap_topic = "/teb_local_planner_costmap2d/costmap";
-      get_parameter_or<std::string>("costmap_topic", costmap_topic, costmap_topic);
-
-      std::string costmap_update_topic = "/map_update";
-      get_parameter_or<std::string>("costmap_update_topic", costmap_update_topic, costmap_update_topic);
-
-      std::string obstacles_topic = "costmap_obstacles";
-      get_parameter_or<std::string>("obstacles_topic", obstacles_topic, obstacles_topic);
-
-      std::string polygon_marker_topic = "costmap_polygon_markers";
-      get_parameter_or<std::string>("polygon_marker_topic", polygon_marker_topic, polygon_marker_topic);
-
-      costmap_sub_ = create_subscription<nav_msgs::msg::OccupancyGrid>(
-                  costmap_topic,
-                  std::bind(&CostmapStandaloneConversion::costmapCallback, this, std::placeholders::_1));
-      costmap_update_sub_ = create_subscription<map_msgs::msg::OccupancyGridUpdate>(
-                  costmap_update_topic,
-                  std::bind(&CostmapStandaloneConversion::costmapUpdateCallback, this, std::placeholders::_1));
-
-      obstacle_pub_ = create_publisher<costmap_converter_msgs::msg::ObstacleArrayMsg>(obstacles_topic, 1000);
-      marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(polygon_marker_topic, 10);
-
-      occupied_min_value_ = 100;
-      get_parameter_or<int>("occupied_min_value", occupied_min_value_, occupied_min_value_);
-
-      std::string odom_topic = "/odom";
-      get_parameter_or<std::string>("odom_topic", odom_topic, odom_topic);
-
-      if (converter_)
-      {
-        converter_->setOdomTopic(odom_topic);
-        converter_->initialize(n_);
-        converter_->setCostmap2D(&map_);
-        //converter_->startWorker(rclcpp::Rate(5), &map, true);
-      }
-   }
-
-
-  void costmapCallback(const nav_msgs::msg::OccupancyGrid::ConstSharedPtr msg)
-  {
-      RCLCPP_INFO_ONCE(get_logger(), "Got first costmap callback. This message will be printed once");
-
-      if (msg->info.width != map_.getSizeInCellsX() || msg->info.height != map_.getSizeInCellsY() || msg->info.resolution != map_.getResolution())
-      {
-        RCLCPP_INFO(get_logger(), "New map format, resizing and resetting map...");
-        map_.resizeMap(msg->info.width, msg->info.height, msg->info.resolution, msg->info.origin.position.x, msg->info.origin.position.y);
-      }
-      else
-      {
-        map_.updateOrigin(msg->info.origin.position.x, msg->info.origin.position.y);
-      }
-
-
-      for (std::size_t i=0; i < msg->data.size(); ++i)
-      {
-        unsigned int mx, my;
-        map_.indexToCells((unsigned int)i, mx, my);
-        map_.setCost(mx, my, msg->data[i] >= occupied_min_value_ ? 255 : 0 );
-      }
-
-      // convert
-      converter_->updateCostmap2D();
-      converter_->compute();
-      costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
-
-      if (!obstacles)
-        return;
-
-      obstacle_pub_->publish(obstacles);
-
-      frame_id_ = msg->header.frame_id;
-
-      publishAsMarker(frame_id_, *obstacles);
-  }
-
-  void costmapUpdateCallback(const map_msgs::msg::OccupancyGridUpdate::ConstSharedPtr update)
-  {
-    unsigned int di = 0;
-    for (unsigned int y = 0; y < update->height ; ++y)
+    try
     {
-      for (unsigned int x = 0; x < update->width ; ++x)
-      {
-        map_.setCost(x, y, update->data[di++] >= occupied_min_value_ ? 255 : 0 );
-      }
+      converter_ = converter_loader_.createSharedInstance(converter_plugin);
+    }
+    catch(const pluginlib::PluginlibException& ex)
+    {
+      RCLCPP_ERROR(get_logger(), "The plugin failed to load for some reason. Error: %s", ex.what());
+      rclcpp::shutdown();
+      return;
     }
 
-    // convert
-    // TODO(roesmann): currently, the converter updates the complete costmap and not the part which is updated in this callback
-    converter_->updateCostmap2D();
-    converter_->compute();
+    RCLCPP_INFO(get_logger(), "Standalone costmap converter: %s loaded.", converter_plugin.c_str());
+
+    std::string obstacles_topic = "costmap_obstacles";
+    declare_parameter("obstacles_topic", rclcpp::ParameterValue(obstacles_topic));
+    get_parameter_or<std::string>("obstacles_topic", obstacles_topic, obstacles_topic);
+
+    std::string polygon_marker_topic = "costmap_polygon_markers";
+    declare_parameter("polygon_marker_topic", rclcpp::ParameterValue(polygon_marker_topic));
+    get_parameter_or<std::string>("polygon_marker_topic", polygon_marker_topic, polygon_marker_topic);
+
+    obstacle_pub_ = create_publisher<costmap_converter_msgs::msg::ObstacleArrayMsg>(obstacles_topic, 1000);
+    marker_pub_ = create_publisher<visualization_msgs::msg::Marker>(polygon_marker_topic, 10);
+
+    occupied_min_value_ = 100;
+    declare_parameter("occupied_min_value", rclcpp::ParameterValue(occupied_min_value_));
+    get_parameter_or<int>("occupied_min_value", occupied_min_value_, occupied_min_value_);
+
+    std::string odom_topic = "/odom";
+    declare_parameter("odom_topic", rclcpp::ParameterValue(odom_topic));
+    get_parameter_or<std::string>("odom_topic", odom_topic, odom_topic);
+
+    if (converter_)
+    {
+      converter_->setOdomTopic(odom_topic);
+      converter_->initialize(std::make_shared<rclcpp::Node>("intra_node", "costmap_converter"));
+      converter_->startWorker(std::make_shared<rclcpp::Rate>(5), costmap_ros_->getCostmap(), true);
+    }
+
+    pub_timer_ = n_->create_wall_timer(
+      std::chrono::milliseconds(200),
+      std::bind(&CostmapStandaloneConversion::publishCallback, this)
+    );
+  }
+
+
+  void publishCallback()
+  {
     costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
 
     if (!obstacles)
       return;
 
     obstacle_pub_->publish(obstacles);
+
+    frame_id_ = costmap_ros_->getGlobalFrameID();
 
     publishAsMarker(frame_id_, *obstacles);
   }
@@ -277,16 +236,14 @@ private:
   std::shared_ptr<costmap_converter::BaseCostmapToPolygons> converter_;
 
   rclcpp::Node::SharedPtr n_;
-  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_sub_;
-  rclcpp::Subscription<map_msgs::msg::OccupancyGridUpdate>::SharedPtr costmap_update_sub_;
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
+  std::unique_ptr<std::thread> costmap_thread_;
   rclcpp::Publisher<costmap_converter_msgs::msg::ObstacleArrayMsg>::SharedPtr obstacle_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
+  rclcpp::TimerBase::SharedPtr pub_timer_;
 
   std::string frame_id_;
   int occupied_min_value_;
-
-  nav2_costmap_2d::Costmap2D map_;
-
 };
 
 

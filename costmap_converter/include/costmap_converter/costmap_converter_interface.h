@@ -242,16 +242,14 @@ protected:
      */
     void spinThread()
     {
-      exec_.reset(new rclcpp::executors::SingleThreadedExecutor());
-      exec_->add_node(nh_);
       while (rclcpp::ok())
       {
         {
           std::lock_guard<std::mutex> terminate_lock(terminate_mutex_);
           if (need_to_terminate_)
             break;
+          rclcpp::spin_some(nh_);
         }
-        exec_->spin_some(std::chrono::milliseconds(100));
       }
     }
     
@@ -277,7 +275,6 @@ protected:
 private:
   rclcpp::TimerBase::SharedPtr worker_timer_;
   rclcpp::Node::SharedPtr nh_;
-  rclcpp::executors::SingleThreadedExecutor::SharedPtr exec_;
   std::thread* spin_thread_;
   std::mutex terminate_mutex_;
   bool need_to_terminate_;
