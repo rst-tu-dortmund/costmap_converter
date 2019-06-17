@@ -72,7 +72,7 @@ public:
 
       RCLCPP_INFO(get_logger(), "Standalone costmap converter: %s loaded.", converter_plugin.c_str());
 
-      std::string costmap_topic = "/map";
+      std::string costmap_topic = "/teb_local_planner_costmap2d/costmap";
       get_parameter_or<std::string>("costmap_topic", costmap_topic, costmap_topic);
 
       std::string costmap_update_topic = "/map_update";

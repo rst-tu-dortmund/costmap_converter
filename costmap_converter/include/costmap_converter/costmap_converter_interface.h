@@ -44,6 +44,7 @@
 #include <memory>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include <nav2_costmap_2d/costmap_2d.hpp>
 #include <nav2_costmap_2d/costmap_2d_ros.hpp>
 #include <geometry_msgs/msg/polygon.hpp>
@@ -195,19 +196,18 @@ public:
       {
         RCLCPP_DEBUG(nh_->get_logger(), "costmap_converter", "Spinning up a thread for the CostmapToPolygons plugin");
         need_to_terminate_ = false;
-        spin_thread_ = new std::thread(std::bind(&BaseCostmapToPolygons::spinThread, this));
-        callback_group_ = nh_->create_callback_group(rclcpp::callback_group::CallbackGroupType::MutuallyExclusive);
-        worker_timer_ = nh_->create_wall_timer(
-                    rate->period(),
-                    std::bind(&BaseCostmapToPolygons::workerCallback, this),
-                    callback_group_);
-      }
-      else
-      {
-        spin_thread_ = NULL;
+        
         worker_timer_ = nh_->create_wall_timer(
                     rate->period(),
                     std::bind(&BaseCostmapToPolygons::workerCallback, this));
+        spin_thread_ = new std::thread(std::bind(&BaseCostmapToPolygons::spinThread, this));
+      }
+      else
+      {
+        worker_timer_ = nh_->create_wall_timer(
+                    rate->period(),
+                    std::bind(&BaseCostmapToPolygons::workerCallback, this));
+        spin_thread_ = nullptr;
       }
     }
     
@@ -242,6 +242,7 @@ protected:
      */
     void spinThread()
     {
+      exec_.reset(new rclcpp::executors::SingleThreadedExecutor());
       exec_->add_node(nh_);
       while (rclcpp::ok())
       {
@@ -276,7 +277,6 @@ protected:
 private:
   rclcpp::TimerBase::SharedPtr worker_timer_;
   rclcpp::Node::SharedPtr nh_;
-  rclcpp::callback_group::CallbackGroup::SharedPtr callback_group_;
   rclcpp::executors::SingleThreadedExecutor::SharedPtr exec_;
   std::thread* spin_thread_;
   std::mutex terminate_mutex_;

@@ -14,6 +14,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(class_loader REQUIRED)
 find_package(costmap_converter_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -40,6 +41,7 @@ find_package(std_msgs REQUIRED)
 
 include_directories(
   include
+  ${class_loader_INCLUDE_DIRS}
   ${costmap_converter_msgs_INCLUDE_DIRS}
   ${cv_bridge_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
@@ -64,6 +66,7 @@ add_library(costmap_converter SHARED
   src/costmap_to_dynamic_obstacles/multitarget_tracker/HungarianAlg.cpp
 )
 set(dependencies
+    class_loader
     costmap_converter_msgs
     cv_bridge
     geometry_msgs
