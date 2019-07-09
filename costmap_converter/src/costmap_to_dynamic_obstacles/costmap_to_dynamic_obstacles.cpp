@@ -33,8 +33,8 @@ void CostmapToDynamicObstacles::initialize(rclcpp::Node::SharedPtr nh)
 //  rclcpp::Node::SharedPtr gn; // create odom topic w.r.t. global node handle
   odom_sub_ = nh->create_subscription<nav_msgs::msg::Odometry>(
               odom_topic_,
-              std::bind(&CostmapToDynamicObstacles::odomCallback, this, std::placeholders::_1),
-              1);
+              rclcpp::SystemDefaultsQoS(),
+              std::bind(&CostmapToDynamicObstacles::odomCallback, this, std::placeholders::_1));
 
   nh->get_parameter_or<bool>("publish_static_obstacles", publish_static_obstacles_, publish_static_obstacles_);
 
