@@ -22,7 +22,6 @@ find_package(nav2_costmap_2d REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(std_msgs REQUIRED)
 
 # TODO : dynamic_reconfigure not supported in ROS2 now
 # add dynamic reconfigure api
@@ -41,15 +40,6 @@ find_package(std_msgs REQUIRED)
 
 include_directories(
   include
-  ${class_loader_INCLUDE_DIRS}
-  ${costmap_converter_msgs_INCLUDE_DIRS}
-  ${cv_bridge_INCLUDE_DIRS}
-  ${geometry_msgs_INCLUDE_DIRS}
-  ${nav2_costmap_2d_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
-  ${pluginlib_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS}
-  ${std_msgs_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -74,7 +64,6 @@ set(dependencies
     OpenCV
     pluginlib
     rclcpp
-    std_msgs
 )
 
 ament_target_dependencies(costmap_converter 
