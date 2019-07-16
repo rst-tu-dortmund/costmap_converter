@@ -2,6 +2,12 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Port to the latest ROS2 distro (Dashing)
+* Messages moved to a separate package
+* Contributors: Vinnam Kim
+
 0.0.9 (2018-05-28)
 ------------------
 * Moved plugin loader for static costmap conversion to BaseCostmapToDynamicObstacles.
