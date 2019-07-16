@@ -38,7 +38,7 @@
 
 #include <costmap_converter/costmap_to_polygons_concave.h>
 
-#include <pluginlib/class_list_macros.h>
+#include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToPolygonsDBSConcaveHull, costmap_converter::BaseCostmapToPolygons)
 
@@ -47,36 +47,38 @@ namespace costmap_converter
     
 CostmapToPolygonsDBSConcaveHull::CostmapToPolygonsDBSConcaveHull() : CostmapToPolygonsDBSMCCH()
 {
-  dynamic_recfg_ = NULL;
+//  dynamic_recfg_ = NULL;
 }
 
 CostmapToPolygonsDBSConcaveHull::~CostmapToPolygonsDBSConcaveHull() 
 {
-  if (dynamic_recfg_ != NULL)
-    delete dynamic_recfg_;
+//  if (dynamic_recfg_ != NULL)
+//    delete dynamic_recfg_;
 }
 
-void CostmapToPolygonsDBSConcaveHull::initialize(ros::NodeHandle nh)
-{
+void CostmapToPolygonsDBSConcaveHull::initialize(rclcpp::Node::SharedPtr nh)
+{ 
+    BaseCostmapToPolygons::initialize(nh);
+    
     max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", max_distance_, max_distance_);
+    nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);
     
     min_pts_ = 2;
-    nh.param("cluster_min_pts", min_pts_, min_pts_);
+    nh->get_parameter_or<int>("cluster_min_pts", min_pts_, min_pts_);
     
     max_pts_ = 30;
-    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    nh->get_parameter_or<int>("cluster_max_pts", max_pts_, max_pts_);
     
     min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    nh->get_parameter_or<double>("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
     
     concave_hull_depth_ = 2.0;
-    nh.param("concave_hull_depth", concave_hull_depth_, concave_hull_depth_);
+    nh->get_parameter_or<double>("concave_hull_depth", concave_hull_depth_, concave_hull_depth_);
     
     // setup dynamic reconfigure
-    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>(nh);
-    dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>::CallbackType cb = boost::bind(&CostmapToPolygonsDBSConcaveHull::reconfigureCB, this, _1, _2);
-    dynamic_recfg_->setCallback(cb);
+//    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>(nh);
+//    dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>::CallbackType cb = boost::bind(&CostmapToPolygonsDBSConcaveHull::reconfigureCB, this, _1, _2);
+//    dynamic_recfg_->setCallback(cb);
 }
 
 
@@ -86,22 +88,22 @@ void CostmapToPolygonsDBSConcaveHull::compute()
     dbScan(occupied_cells_, clusters);
     
     // Create new polygon container
-    PolygonContainerPtr polygons(new std::vector<geometry_msgs::Polygon>());
+    PolygonContainerPtr polygons(new std::vector<geometry_msgs::msg::Polygon>());
     
     
     // add convex hulls to polygon container
-    for (int i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
+    for (size_t i = 1; i <clusters.size(); ++i) // skip first cluster, since it is just noise
     {
-      polygons->push_back( geometry_msgs::Polygon() );
+      polygons->push_back( geometry_msgs::msg::Polygon() );
       concaveHull(clusters[i], concave_hull_depth_, polygons->back() );
     }
     
     // add our non-cluster points to the polygon container (as single points)
     if (!clusters.empty())
     {
-      for (int i=0; i < clusters.front().size(); ++i)
+      for (size_t i=0; i < clusters.front().size(); ++i)
       {
-        polygons->push_back( geometry_msgs::Polygon() );
+        polygons->push_back( geometry_msgs::msg::Polygon() );
         convertPointToPolygon(clusters.front()[i], polygons->back());
       }
     }
@@ -111,19 +113,19 @@ void CostmapToPolygonsDBSConcaveHull::compute()
 }
 
 
-void CostmapToPolygonsDBSConcaveHull::concaveHull(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::Polygon& polygon)
+void CostmapToPolygonsDBSConcaveHull::concaveHull(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::msg::Polygon& polygon)
 {
     // start with convex hull
     convexHull2(cluster, polygon);
 
-    std::vector<geometry_msgs::Point32>& concave_list = polygon.points;
+    std::vector<geometry_msgs::msg::Point32>& concave_list = polygon.points;
 
     for (int i = 0; i < (int)concave_list.size() - 1; ++i)
     {
       
         // find nearest inner point pk from line (vertex1 -> vertex2)
-        const geometry_msgs::Point32& vertex1 = concave_list[i];
-        const geometry_msgs::Point32& vertex2 = concave_list[i+1];
+        const geometry_msgs::msg::Point32& vertex1 = concave_list[i];
+        const geometry_msgs::msg::Point32& vertex2 = concave_list[i+1];
 
         bool found;
         size_t nearest_idx = findNearestInnerPoint(vertex1, vertex2, cluster, concave_list, &found);
@@ -145,7 +147,7 @@ void CostmapToPolygonsDBSConcaveHull::concaveHull(std::vector<KeyPoint>& cluster
             intersects |= checkLineIntersection(concave_list, vertex1, vertex2, cluster[nearest_idx], vertex2);
             if (!intersects) 
             {
-              geometry_msgs::Point32 new_point;
+              geometry_msgs::msg::Point32 new_point;
               cluster[nearest_idx].toPointMsg(new_point);
               concave_list.insert(concave_list.begin() + i + 1, new_point);
               i--;
@@ -155,12 +157,12 @@ void CostmapToPolygonsDBSConcaveHull::concaveHull(std::vector<KeyPoint>& cluster
 }
 
 
-void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::Polygon& polygon)
+void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::msg::Polygon& polygon)
 {
     // start with convex hull
     convexHull2(cluster, polygon);
 
-    std::vector<geometry_msgs::Point32>& concave_list = polygon.points;
+    std::vector<geometry_msgs::msg::Point32>& concave_list = polygon.points;
     
     // get line length
     double mean_length = 0;
@@ -174,8 +176,8 @@ void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint
     {
       
         // find nearest inner point pk from line (vertex1 -> vertex2)
-        const geometry_msgs::Point32& vertex1 = concave_list[i];
-        const geometry_msgs::Point32& vertex2 = concave_list[i+1];
+        const geometry_msgs::msg::Point32& vertex1 = concave_list[i];
+        const geometry_msgs::msg::Point32& vertex2 = concave_list[i+1];
 
         double line_length = norm2d(vertex1, vertex2);
         
@@ -200,7 +202,7 @@ void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint
             intersects |= checkLineIntersection(concave_list, vertex1, vertex2, cluster[nearest_idx], vertex2);
             if (!intersects) 
             {
-              geometry_msgs::Point32 new_point;
+              geometry_msgs::msg::Point32 new_point;
               cluster[nearest_idx].toPointMsg(new_point);
               concave_list.insert(concave_list.begin() + i + 1, new_point);
               i--;
@@ -212,14 +214,14 @@ void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint
 
 
 
-void CostmapToPolygonsDBSConcaveHull::reconfigureCB(CostmapToPolygonsDBSConcaveHullConfig& config, uint32_t level)
-{
-    max_distance_ = config.cluster_max_distance;
-    min_pts_ = config.cluster_min_pts;
-    max_pts_ = config.cluster_max_pts;
-    min_keypoint_separation_ = config.cluster_min_pts;
-    concave_hull_depth_ = config.concave_hull_depth;
-}
+//void CostmapToPolygonsDBSConcaveHull::reconfigureCB(CostmapToPolygonsDBSConcaveHullConfig& config, uint32_t level)
+//{
+//    max_distance_ = config.cluster_max_distance;
+//    min_pts_ = config.cluster_min_pts;
+//    max_pts_ = config.cluster_max_pts;
+//    min_keypoint_separation_ = config.cluster_min_pts;
+//    concave_hull_depth_ = config.concave_hull_depth;
+//}
 
 }//end namespace costmap_converter
 

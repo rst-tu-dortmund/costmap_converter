@@ -43,8 +43,8 @@
 #include <costmap_converter/misc.h>
 
 // dynamic reconfigure
-#include <costmap_converter/CostmapToPolygonsDBSConcaveHullConfig.h>
-#include <dynamic_reconfigure/server.h>
+//#include <costmap_converter/CostmapToPolygonsDBSConcaveHullConfig.h>
+//#include <dynamic_reconfigure/server.h>
 
 
 namespace costmap_converter
@@ -77,7 +77,7 @@ class CostmapToPolygonsDBSConcaveHull : public CostmapToPolygonsDBSMCCH
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(ros::NodeHandle nh);
+    virtual void initialize(rclcpp::Node::SharedPtr nh);
    
     
     /**
@@ -96,9 +96,9 @@ class CostmapToPolygonsDBSConcaveHull : public CostmapToPolygonsDBSMCCH
      * @param depth Smaller depth: sharper surface, depth -> high value: convex hull
      * @param[out] polygon the resulting convex polygon
      */  
-    void concaveHull(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::Polygon& polygon);
+    void concaveHull(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::msg::Polygon& polygon);
         
-    void concaveHullClusterCut(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::Polygon& polygon);
+    void concaveHullClusterCut(std::vector<KeyPoint>& cluster, double depth, geometry_msgs::msg::Polygon& polygon);
     
     template <typename PointLine, typename PointCluster, typename PointHull>
     std::size_t findNearestInnerPoint(PointLine line_start, PointLine line_end, const std::vector<PointCluster>& cluster, const std::vector<PointHull>& hull, bool* found);
@@ -122,9 +122,9 @@ class CostmapToPolygonsDBSConcaveHull : public CostmapToPolygonsDBSMCCH
      * @param config Reference to the dynamic reconfigure config
      * @param level Dynamic reconfigure level
      */
-    void reconfigureCB(CostmapToPolygonsDBSConcaveHullConfig& config, uint32_t level);
+//    void reconfigureCB(CostmapToPolygonsDBSConcaveHullConfig& config, uint32_t level);
     
-    dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime    
+//    dynamic_reconfigure::Server<CostmapToPolygonsDBSConcaveHullConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime
    
    
 }; 
@@ -140,7 +140,7 @@ std::size_t CostmapToPolygonsDBSConcaveHull::findNearestInnerPoint(PointLine lin
     for (std::size_t i = 0; i < cluster.size(); ++i)
     {
         // Skip points that are already in the hull
-        if (std::find_if( hull.begin(), hull.end(), boost::bind(isApprox2d<PointHull, PointCluster>, _1, boost::cref(cluster[i]), 1e-5) ) != hull.end() )
+        if (std::find_if( hull.begin(), hull.end(), std::bind(isApprox2d<PointHull, PointCluster>, std::placeholders::_1, std::cref(cluster[i]), 1e-5) ) != hull.end() )
             continue;
 
         double dist = computeDistanceToLineSegment(cluster[i], line_start, line_end);

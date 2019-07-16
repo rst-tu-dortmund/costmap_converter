@@ -40,33 +40,35 @@
 #define COSTMAP_CONVERTER_INTERFACE_H_
 
 //#include <costmap_2d/costmap_2d_ros.h>
-#include <ros/ros.h>
-#include <ros/callback_queue.h>
-#include <boost/thread.hpp>
-#include <costmap_2d/costmap_2d.h>
-#include <costmap_2d/costmap_2d_ros.h>
-#include <geometry_msgs/Polygon.h>
-#include <costmap_converter/ObstacleArrayMsg.h>
+#include <mutex>
+#include <memory>
 
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_lifecycle/lifecycle_node.hpp>
+#include <nav2_costmap_2d/costmap_2d.hpp>
+#include <nav2_costmap_2d/costmap_2d_ros.hpp>
+#include <geometry_msgs/msg/polygon.hpp>
+#include <costmap_converter_msgs/msg/obstacle_array_msg.hpp>
 
 namespace costmap_converter
 {
+  
 //! Typedef for a shared dynamic obstacle container
-typedef boost::shared_ptr<ObstacleArrayMsg> ObstacleArrayPtr;
+typedef costmap_converter_msgs::msg::ObstacleArrayMsg::SharedPtr ObstacleArrayPtr;
 //! Typedef for a shared dynamic obstacle container (read-only access)
-typedef boost::shared_ptr< const ObstacleArrayMsg > ObstacleArrayConstPtr;
+typedef costmap_converter_msgs::msg::ObstacleArrayMsg::ConstSharedPtr ObstacleArrayConstPtr;
 
 //! Typedef for a shared polygon container 
-typedef boost::shared_ptr< std::vector<geometry_msgs::Polygon> > PolygonContainerPtr;
+typedef std::shared_ptr<std::vector<geometry_msgs::msg::Polygon>> PolygonContainerPtr;
 //! Typedef for a shared polygon container (read-only access)
-typedef boost::shared_ptr< const std::vector<geometry_msgs::Polygon> > PolygonContainerConstPtr;
+typedef std::shared_ptr<const std::vector<geometry_msgs::msg::Polygon>> PolygonContainerConstPtr;
   
 
 /**
  * @class BaseCostmapToPolygons
  * @brief This abstract class defines the interface for plugins that convert the costmap into polygon types
  * 
- * Plugins must accept a costmap_2d::Costmap2D datatype as information source.
+ * Plugins must accept a nav2_costmap_2d::Costmap2D datatype as information source.
  * The interface provides two different use cases:
  * 1. Manual call to conversion routines: setCostmap2D(), compute() and getPolygons() 
  *    (in subsequent calls setCostmap2D() can be substituted by updateCostmap2D())
@@ -82,7 +84,9 @@ public:
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(ros::NodeHandle nh) = 0;
+    virtual void initialize(rclcpp::Node::SharedPtr nh) {
+      nh_ = nh;
+    }
     
     /**
      * @brief Destructor
@@ -99,7 +103,7 @@ public:
      * @sa updateCostmap2D
      * @param costmap Pointer to the costmap2d source
      */
-    virtual void setCostmap2D(costmap_2d::Costmap2D* costmap) = 0;
+    virtual void setCostmap2D(nav2_costmap_2d::Costmap2D* costmap) = 0;
     
     /**
      * @brief Get updated data from the previously set Costmap2D
@@ -134,11 +138,11 @@ public:
    */
     virtual ObstacleArrayConstPtr getObstacles()
     {
-      ObstacleArrayPtr obstacles = boost::make_shared<ObstacleArrayMsg>();
+      ObstacleArrayPtr obstacles = std::make_shared<costmap_converter_msgs::msg::ObstacleArrayMsg>();
       PolygonContainerConstPtr polygons = getPolygons();
       if (polygons)
       {
-        for (const geometry_msgs::Polygon& polygon : *polygons)
+        for (const geometry_msgs::msg::Polygon& polygon : *polygons)
         {
           obstacles->obstacles.emplace_back();
           obstacles->obstacles.back().polygon = polygon;
@@ -154,7 +158,7 @@ public:
      * to compensate the robot's ego motion
      * @param odom_topic topic name
      */
-    virtual void setOdomTopic(const std::string& odom_topic) {}
+    virtual void setOdomTopic(const std::string& odom_topic) { (void)odom_topic; }
 
     /**
      * @brief Determines whether an additional plugin for subsequent costmap conversion is specified
@@ -174,14 +178,14 @@ public:
       * @param costmap Pointer to the underlying costmap (must be valid and lockable as long as the worker is active
       * @param spin_thread if \c true,the timer is invoked in a separate thread, otherwise in the default callback queue)
      */
-    void startWorker(ros::Rate rate, costmap_2d::Costmap2D* costmap, bool spin_thread = false)
+    void startWorker(rclcpp::Rate::SharedPtr rate, nav2_costmap_2d::Costmap2D* costmap, bool spin_thread = false)
     {
       setCostmap2D(costmap);
       
       if (spin_thread_)
       {
         {
-          boost::mutex::scoped_lock terminate_lock(terminate_mutex_);
+          std::lock_guard<std::mutex> terminate_lock(terminate_mutex_);
           need_to_terminate_ = true;
         }
         spin_thread_->join();
@@ -190,18 +194,21 @@ public:
       
       if (spin_thread)
       {
-        ROS_DEBUG_NAMED("costmap_converter", "Spinning up a thread for the CostmapToPolygons plugin");
+        RCLCPP_DEBUG(nh_->get_logger(), "costmap_converter", "Spinning up a thread for the CostmapToPolygons plugin");
         need_to_terminate_ = false;
-        spin_thread_ = new boost::thread(boost::bind(&BaseCostmapToPolygons::spinThread, this));
-        nh_.setCallbackQueue(&callback_queue_);
+        
+        worker_timer_ = nh_->create_wall_timer(
+                    rate->period(),
+                    std::bind(&BaseCostmapToPolygons::workerCallback, this));
+        spin_thread_ = new std::thread(std::bind(&BaseCostmapToPolygons::spinThread, this));
       }
       else
       {
-        spin_thread_ = NULL;
-        nh_.setCallbackQueue(ros::getGlobalCallbackQueue());
+        worker_timer_ = nh_->create_wall_timer(
+                    rate->period(),
+                    std::bind(&BaseCostmapToPolygons::workerCallback, this));
+        spin_thread_ = nullptr;
       }
-      
-      worker_timer_ = nh_.createTimer(rate, &BaseCostmapToPolygons::workerCallback, this);
     }
     
     /**
@@ -209,11 +216,11 @@ public:
      */
     void stopWorker()
     {
-      worker_timer_.stop();
+      worker_timer_->cancel();
       if (spin_thread_)
       {
         {
-          boost::mutex::scoped_lock terminate_lock(terminate_mutex_);
+          std::lock_guard<std::mutex> terminate_lock(terminate_mutex_);
           need_to_terminate_ = true;
         }
         spin_thread_->join();
@@ -226,39 +233,50 @@ protected:
     /**
      * @brief Protected constructor that should be called by subclasses
      */
-    BaseCostmapToPolygons() : nh_("~costmap_to_polygons"), spin_thread_(NULL), need_to_terminate_(false) {}
+    BaseCostmapToPolygons() : //nh_("~costmap_to_polygons"),
+        nh_(nullptr),
+        spin_thread_(nullptr), need_to_terminate_(false) {}
     
     /**
      * @brief Blocking method that checks for new timer events (active if startWorker() is called with spin_thread enabled) 
      */
     void spinThread()
     {
-      while (nh_.ok())
+      while (rclcpp::ok())
       {
         {
-          boost::mutex::scoped_lock terminate_lock(terminate_mutex_);
+          std::lock_guard<std::mutex> terminate_lock(terminate_mutex_);
           if (need_to_terminate_)
             break;
+          rclcpp::spin_some(nh_);
         }
-        callback_queue_.callAvailable(ros::WallDuration(0.1f));
       }
     }
     
     /**
      * @brief The callback of the worker that performs the actual work (updating the costmap and converting it to polygons)
      */
-    void workerCallback(const ros::TimerEvent&)
+    void workerCallback()
     {
       updateCostmap2D();
       compute();
     }
+
+    rclcpp::Logger getLogger() const
+    {
+        return nh_->get_logger();
+    }
+
+    rclcpp::Time now() const
+    {
+        return nh_->now();
+    }
     
 private:
-  ros::Timer worker_timer_;
-  ros::NodeHandle nh_;
-  boost::thread* spin_thread_;
-  ros::CallbackQueue callback_queue_;
-  boost::mutex terminate_mutex_;
+  rclcpp::TimerBase::SharedPtr worker_timer_;
+  rclcpp::Node::SharedPtr nh_;
+  std::thread* spin_thread_;
+  std::mutex terminate_mutex_;
   bool need_to_terminate_;
 };    
 
@@ -279,24 +297,25 @@ public:
    *                    costmap_converter::CostmapToPolygonsDBSMCCH
    * @param nh_parent   NodeHandle which is extended by the namespace of the static conversion plugin
    */
-  void loadStaticCostmapConverterPlugin(const std::string& plugin_name, ros::NodeHandle nh_parent)
+  void loadStaticCostmapConverterPlugin(const std::string& plugin_name, rclcpp::Node::SharedPtr nh_parent)
   {
     try
     {
-      static_costmap_converter_ = static_converter_loader_.createInstance(plugin_name);
+      static_costmap_converter_ = static_converter_loader_.createSharedInstance(plugin_name);
 
-      if(boost::dynamic_pointer_cast<BaseCostmapToDynamicObstacles>(static_costmap_converter_))
+      if(std::dynamic_pointer_cast<BaseCostmapToDynamicObstacles>(static_costmap_converter_))
       {
         throw pluginlib::PluginlibException("The specified plugin for static costmap conversion is a dynamic plugin. Specify a static plugin.");
       }
-      std::string raw_plugin_name = static_converter_loader_.getName(plugin_name);
-      static_costmap_converter_->initialize(ros::NodeHandle(nh_parent, raw_plugin_name));
+//      std::string raw_plugin_name = static_converter_loader_.getName(plugin_name);
+      static_costmap_converter_->initialize(nh_parent);
       setStaticCostmapConverterPlugin(static_costmap_converter_);
-      ROS_INFO_STREAM("CostmapToDynamicObstacles: underlying costmap conversion plugin for static obstacles " << plugin_name << " loaded.");
+      RCLCPP_INFO(getLogger(), "CostmapToDynamicObstacles: underlying costmap conversion plugin for static obstacles %s loaded.", plugin_name);
     }
     catch(const pluginlib::PluginlibException& ex)
     {
-      ROS_WARN("CostmapToDynamicObstacles: The specified costmap converter plugin cannot be loaded. Continuing without subsequent conversion of static obstacles. Error message: %s", ex.what());
+      RCLCPP_WARN(getLogger(), "CostmapToDynamicObstacles: The specified costmap converter plugin cannot be loaded. "
+                               "Continuing without subsequent conversion of static obstacles. Error message: %s", ex.what());
       static_costmap_converter_.reset();
     }
   }
@@ -305,7 +324,7 @@ public:
    * @brief Set the underlying plugin for subsequent costmap conversion of the static background of the costmap
    * @param static_costmap_converter shared pointer to the static costmap conversion plugin
    */
-  void setStaticCostmapConverterPlugin(boost::shared_ptr<BaseCostmapToPolygons> static_costmap_converter)
+  void setStaticCostmapConverterPlugin(std::shared_ptr<BaseCostmapToPolygons> static_costmap_converter)
   {
     static_costmap_converter_ = static_costmap_converter;
   }
@@ -314,7 +333,7 @@ public:
    * @brief Set the costmap for the underlying plugin
    * @param static_costmap Costmap2D, which contains the static part of the original costmap
    */
-  void setStaticCostmap(boost::shared_ptr<costmap_2d::Costmap2D> static_costmap)
+  void setStaticCostmap(std::shared_ptr<nav2_costmap_2d::Costmap2D> static_costmap)
   {
     static_costmap_converter_->setCostmap2D(static_costmap.get());
   }
@@ -357,7 +376,7 @@ protected:
 
 private:
   pluginlib::ClassLoader<BaseCostmapToPolygons> static_converter_loader_;
-  boost::shared_ptr<BaseCostmapToPolygons> static_costmap_converter_;
+  std::shared_ptr<BaseCostmapToPolygons> static_costmap_converter_;
 };
 
 

@@ -45,9 +45,9 @@
 
 // ROS
 #include <costmap_converter/costmap_converter_interface.h>
-#include <nav_msgs/Odometry.h>
-#include <pluginlib/class_loader.h>
-#include <ros/ros.h>
+#include <nav_msgs/msg/odometry.hpp>
+#include <pluginlib/class_loader.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 // OpenCV
 #include <cv_bridge/cv_bridge.h>
@@ -55,8 +55,8 @@
 #include <opencv2/video/tracking.hpp>
 
 // dynamic reconfigure
-#include <costmap_converter/CostmapToDynamicObstaclesConfig.h>
-#include <dynamic_reconfigure/server.h>
+//#include <costmap_converter/CostmapToDynamicObstaclesConfig.h>
+//#include <dynamic_reconfigure/server.h>
 
 // Own includes
 #include <costmap_converter/costmap_to_dynamic_obstacles/multitarget_tracker/Ctracker.h>
@@ -91,7 +91,7 @@ public:
    * @brief Initialize the plugin
    * @param nh Nodehandle that defines the namespace for parameters
    */
-  virtual void initialize(ros::NodeHandle nh);
+  virtual void initialize(rclcpp::Node::SharedPtr nh);
 
   /**
    * @brief This method performs the actual work (conversion of the costmap to
@@ -104,7 +104,7 @@ public:
    * @sa updateCostmap2D
    * @param costmap Pointer to the costmap2d source
    */
-  virtual void setCostmap2D(costmap_2d::Costmap2D* costmap);
+  virtual void setCostmap2D(nav2_costmap_2d::Costmap2D* costmap);
 
   /**
    * @brief Get updated data from the previously set Costmap2D
@@ -169,8 +169,8 @@ protected:
   void updateObstacleContainer(ObstacleArrayPtr obstacles);
 
 private:
-  boost::mutex mutex_;
-  costmap_2d::Costmap2D* costmap_;
+  std::mutex mutex_;
+  nav2_costmap_2d::Costmap2D* costmap_;
   cv::Mat costmap_mat_;
   ObstacleArrayPtr obstacles_;
   cv::Mat fg_mask_;
@@ -178,15 +178,15 @@ private:
   cv::Ptr<BlobDetector> blob_det_;
   std::vector<cv::KeyPoint> keypoints_;
   std::unique_ptr<CTracker> tracker_;
-  ros::Subscriber odom_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   Point_t ego_vel_;
 
   std::string odom_topic_ = "/odom";
   bool publish_static_obstacles_ = true;
 
-  dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>*
-      dynamic_recfg_; //!< Dynamic reconfigure server to allow config
-                       //! modifications at runtime
+//  dynamic_reconfigure::Server<CostmapToDynamicObstaclesConfig>*
+//      dynamic_recfg_; //!< Dynamic reconfigure server to allow config
+//                       //! modifications at runtime
 
   /**
    * @brief Callback for the odometry messages of the observing robot.
@@ -194,7 +194,7 @@ private:
    * Used to convert the velocity of obstacles to the /map frame.
    * @param msg The Pointer to the nav_msgs::Odometry of the observing robot
    */
-  void odomCallback(const nav_msgs::Odometry::ConstPtr &msg);
+  void odomCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
   /**
    * @brief Callback for the dynamic_reconfigure node.
@@ -204,7 +204,7 @@ private:
    * @param config Reference to the dynamic reconfigure config
    * @param level Dynamic reconfigure level
    */
-  void reconfigureCB(CostmapToDynamicObstaclesConfig &config, uint32_t level);
+//  void reconfigureCB(CostmapToDynamicObstaclesConfig &config, uint32_t level);
 };
 
 } // end namespace costmap_converter

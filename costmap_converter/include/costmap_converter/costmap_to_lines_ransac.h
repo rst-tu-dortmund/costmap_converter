@@ -42,9 +42,10 @@
 #include <costmap_converter/costmap_converter_interface.h>
 #include <costmap_converter/costmap_to_polygons.h>
 #include <costmap_converter/misc.h>
-#include <boost/random.hpp>
 
-#include <costmap_converter/CostmapToLinesDBSRANSACConfig.h>
+#include <random>
+
+//#include <costmap_converter/CostmapToLinesDBSRANSACConfig.h>
 
 namespace costmap_converter
 {
@@ -86,7 +87,7 @@ namespace costmap_converter
      * @brief Initialize the plugin
      * @param nh Nodehandle that defines the namespace for parameters
      */
-    virtual void initialize(ros::NodeHandle nh);
+    virtual void initialize(rclcpp::Node::SharedPtr nh);
     
     /**
      * @brief This method performs the actual work (conversion of the costmap to polygons)
@@ -117,7 +118,7 @@ namespace costmap_converter
     bool ransac_filter_remaining_outlier_pts_; //!< If \c true, filter the interior of remaining outliers and keep only keypoints of their convex hull
    
    
-   boost::random::mt19937 rnd_generator_; //!< Random number generator for ransac with default seed
+   std::mt19937 rnd_generator_; //!< Random number generator for ransac with default seed
     
     
     /**
@@ -161,10 +162,9 @@ namespace costmap_converter
      * @param config Reference to the dynamic reconfigure config
      * @param level Dynamic reconfigure level
      */
-    void reconfigureCB(CostmapToLinesDBSRANSACConfig& config, uint32_t level);
+//    void reconfigureCB(CostmapToLinesDBSRANSACConfig& config, uint32_t level);
     
-    dynamic_reconfigure::Server<CostmapToLinesDBSRANSACConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime   
-    
+//    dynamic_reconfigure::Server<CostmapToLinesDBSRANSACConfig>* dynamic_recfg_; //!< Dynamic reconfigure server to allow config modifications at runtime
   };  
   
   

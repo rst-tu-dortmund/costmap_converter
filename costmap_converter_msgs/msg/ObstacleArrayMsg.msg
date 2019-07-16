@@ -6,5 +6,5 @@
 
 std_msgs/Header header
 
-costmap_converter/ObstacleMsg[] obstacles
+costmap_converter_msgs/ObstacleMsg[] obstacles
 
