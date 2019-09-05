@@ -98,7 +98,22 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
       //! Convert keypoint to geometry_msgs::Point32 message type
       void toPointMsg(geometry_msgs::Point32& point) const {point.x=x; point.y=y; point.z=0;}
     };
-    
+
+    /**
+     * @struct Parameters
+     * @brief Defines the parameters of the algorithm
+     */
+    struct Parameters
+    {
+      Parameters() : max_distance_(0.4), min_pts_(2), max_pts_(30), min_keypoint_separation_(0.1) {}
+      // DBSCAN parameters
+      double max_distance_; //!< Parameter for DB_Scan, maximum distance to neighbors [m]
+      int min_pts_; //!< Parameter for DB_Scan: minimum number of points that define a cluster
+      int max_pts_; //!< Parameter for DB_Scan: maximum number of points that define a cluster (to avoid large L- and U-shapes)
+      
+      // convex hull parameters
+      double min_keypoint_separation_; //!< Clear keypoints of the convex polygon that are close to each other [distance in meters] (0: keep all)
+    };
     
     /**
      * @brief Constructor
@@ -169,21 +184,32 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      *               A density-based algorithm for discovering clusters in large spatial databases with noise. 
      *               Proceedings of the Second International Conference on Knowledge Discovery and Data Mining. AAAI Press. 1996. pp. 226–231. ISBN 1-57735-004-9. 
      * 
-     * @param occupied_cells a list of occupied cells of the costmap in metric coordinates
      * @param[out] clusters clusters will added to this output-argument (a sequence of keypoints for each cluster)
      *                      the first cluster (clusters[0]) will contain all noise points (that does not fulfil the min_pts condition 
      */
-    void dbScan(const std::vector<KeyPoint>& occupied_cells, std::vector< std::vector<KeyPoint> >& clusters);
+    void dbScan(std::vector< std::vector<KeyPoint> >& clusters);
     
     /**
      * @brief Helper function for dbScan to search for neighboring points 
      * 
-     * @param occupied_cells a list of occupied cells of the costmap in metric coordinates
      * @param curr_index index to the current item in \c occupied_cells
      * @param[out] neighbor_indices list of neighbors (indices of \c occupied cells)
      */
-    void regionQuery(const std::vector<KeyPoint>& occupied_cells, int curr_index, std::vector<int>& neighbor_indices);
+    void regionQuery(int curr_index, std::vector<int>& neighbor_indices);
 
+    /**
+     * @brief helper function for adding a point to the lookup data structures
+     */
+    void addPoint(double x, double y)
+    {
+      int idx = occupied_cells_.size();
+      occupied_cells_.emplace_back(x, y);
+      int cx, cy;
+      pointToNeighborCells(occupied_cells_.back(), cx, cy);
+      int nidx = neighborCellsToIndex(cx, cy);
+      if (nidx >= 0)
+        neighbor_lookup_[nidx].push_back(idx);
+    }
     
     /**
      * @brief Compute the convex hull for a single cluster (monotone chain algorithm)
@@ -238,14 +264,30 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
           
    
    std::vector<KeyPoint> occupied_cells_; //!< List of occupied cells in the current map (updated by updateCostmap2D())
-
-   // DBSCAN parameters
-   double max_distance_; //!< Parameter for DB_Scan, maximum distance to neighbors [m]
-   int min_pts_; //!< Parameter for DB_Scan: minimum number of points that define a cluster
-   int max_pts_; //!< Parameter for DB_Scan: maximum number of points that define a cluster (to avoid large L- and U-shapes)
    
-   // convex hull parameters
-   double min_keypoint_separation_; //!< Clear keypoints of the convex polygon that are close to each other [distance in meters] (0: keep all)
+   std::vector<std::vector<int> > neighbor_lookup_; //! array of cells for neighbor lookup
+   int neighbor_size_x_;
+   int neighbor_size_y_;
+   double offset_x_;
+   double offset_y_;
+
+   int neighborCellsToIndex(int cx, int cy)
+   {
+     if (cx < 0 || cx >= neighbor_size_x_ || cy < 0 || cy >= neighbor_size_y_)
+       return -1;
+     return cy * neighbor_size_x_ + cx;
+   }
+
+   int pointToNeighborCells(const KeyPoint& kp, int& cx, int& cy)
+   {
+     cx = int((kp.x - offset_x_) / parameter_.max_distance_);
+     cy = int((kp.y - offset_y_) / parameter_.max_distance_);
+   }
+
+
+    Parameters parameter_;          //< active parameters throughout computation
+    Parameters parameter_buffered_; //< the buffered parameters that are offered to dynamic reconfigure
+    boost::mutex parameter_mutex_;  //!< Mutex that keeps track about the ownership of the shared polygon instance
    
   private:
        

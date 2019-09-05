@@ -61,18 +61,19 @@ CostmapToLinesDBSMCCH::~CostmapToLinesDBSMCCH()
 void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
 { 
     // DB SCAN
-    max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", max_distance_, max_distance_);
+    parameter_.max_distance_ = 0.4; 
+    nh.param("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
     
-    min_pts_ = 2;
-    nh.param("cluster_min_pts", min_pts_, min_pts_);
+    parameter_.min_pts_ = 2;
+    nh.param("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
     
-    max_pts_ = 30;
-    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    parameter_.max_pts_ = 30;
+    nh.param("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
     
     // convex hull
-    min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    parameter_.min_keypoint_separation_ = 0.1;
+    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
+    parameter_buffered_ = parameter_;
     
     // Line extraction
     support_pts_max_dist_ = 0.3;
@@ -99,7 +100,7 @@ void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
 void CostmapToLinesDBSMCCH::compute()
 {
     std::vector< std::vector<KeyPoint> > clusters;
-    dbScan(occupied_cells_, clusters);
+    dbScan(clusters);
     
     // Create new polygon container
     PolygonContainerPtr polygons(new std::vector<geometry_msgs::Polygon>());  
@@ -283,10 +284,11 @@ void CostmapToLinesDBSMCCH::extractPointsAndLines(std::vector<KeyPoint>& cluster
 
 void CostmapToLinesDBSMCCH::reconfigureCB(CostmapToLinesDBSMCCHConfig& config, uint32_t level)
 {
-    max_distance_ = config.cluster_max_distance;
-    min_pts_ = config.cluster_min_pts;
-    max_pts_ = config.cluster_max_pts;
-    min_keypoint_separation_ = config.cluster_min_pts;
+    boost::mutex::scoped_lock lock(parameter_mutex_);
+    parameter_buffered_.max_distance_ = config.cluster_max_distance;
+    parameter_buffered_.min_pts_ = config.cluster_min_pts;
+    parameter_buffered_.max_pts_ = config.cluster_max_pts;
+    parameter_buffered_.min_keypoint_separation_ = config.cluster_min_pts;
     support_pts_max_dist_ = config.support_pts_max_dist;
     support_pts_max_dist_inbetween_ = config.support_pts_max_dist_inbetween;
     min_support_pts_ = config.min_support_pts;
