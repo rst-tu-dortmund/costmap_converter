@@ -415,9 +415,10 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
     
     if (parameter_.min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
     {
+      double keypoint_sep_sqr = std::pow(parameter_.min_keypoint_separation_, 2);
       for (int i=0; i < (int) polygon.points.size() - 1; ++i)
       {
-        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < parameter_.min_keypoint_separation_ )
+        if ( std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2) < keypoint_sep_sqr )
           polygon.points.erase(polygon.points.begin()+i+1);
       }
     }
