@@ -265,24 +265,35 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
    
    std::vector<KeyPoint> occupied_cells_; //!< List of occupied cells in the current map (updated by updateCostmap2D())
    
-   std::vector<std::vector<int> > neighbor_lookup_; //! array of cells for neighbor lookup
-   int neighbor_size_x_;
-   int neighbor_size_y_;
-   double offset_x_;
-   double offset_y_;
+    std::vector<std::vector<int> > neighbor_lookup_; //! array of cells for neighbor lookup
+    int neighbor_size_x_; //! size of the neighbour lookup in x (number of cells)
+    int neighbor_size_y_; //! size of the neighbour lookup in y (number of cells)
+    double offset_x_;     //! offset [meters] in x for the lookup grid
+    double offset_y_;     //! offset [meters] in y for the lookup grid
 
-   int neighborCellsToIndex(int cx, int cy)
-   {
-     if (cx < 0 || cx >= neighbor_size_x_ || cy < 0 || cy >= neighbor_size_y_)
-       return -1;
-     return cy * neighbor_size_x_ + cx;
-   }
+    /**
+      * @brief convert a 2d cell coordinate into the 1D index of the array
+      * @param cx the x index of the cell
+      * @param cy the y index of the cell
+      */
+    int neighborCellsToIndex(int cx, int cy)
+    {
+      if (cx < 0 || cx >= neighbor_size_x_ || cy < 0 || cy >= neighbor_size_y_)
+        return -1;
+      return cy * neighbor_size_x_ + cx;
+    }
 
-   int pointToNeighborCells(const KeyPoint& kp, int& cx, int& cy)
-   {
-     cx = int((kp.x - offset_x_) / parameter_.max_distance_);
-     cy = int((kp.y - offset_y_) / parameter_.max_distance_);
-   }
+    /**
+      * @brief compute the cell indices of a keypoint
+      * @param kp key point given in world coordinates [m, m]
+      * @param cx output cell index in x direction
+      * @param cy output cell index in y direction
+      */
+    int pointToNeighborCells(const KeyPoint& kp, int& cx, int& cy)
+    {
+      cx = int((kp.x - offset_x_) / parameter_.max_distance_);
+      cy = int((kp.y - offset_y_) / parameter_.max_distance_);
+    }
 
 
     Parameters parameter_;          //< active parameters throughout computation
