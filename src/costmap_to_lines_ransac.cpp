@@ -60,38 +60,20 @@ CostmapToLinesDBSRANSAC::~CostmapToLinesDBSRANSAC()
 void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
 { 
     // DB SCAN
-    parameter_.max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
-    
-    parameter_.min_pts_ = 2;
-    nh.param("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
-    
-    parameter_.max_pts_ = 30;
-    nh.param("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
-    
+    nh.param("cluster_max_distance", parameter_.max_distance_, 0.4);
+    nh.param("cluster_min_pts", parameter_.min_pts_, 2);
+    nh.param("cluster_max_pts", parameter_.max_pts_, 30);
     // convex hull (only necessary if outlier filtering is enabled)
-    parameter_.min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
+    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, 0.1);
     parameter_buffered_ = parameter_;
 
     // ransac
-    ransac_inlier_distance_ = 0.2;
-    nh.param("ransac_inlier_distance", ransac_inlier_distance_, ransac_inlier_distance_);
-    
-    ransac_min_inliers_ = 10;
-    nh.param("ransac_min_inliers", ransac_min_inliers_, ransac_min_inliers_);
-    
-    ransac_no_iterations_ = 2000;
-    nh.param("ransac_no_iterations", ransac_no_iterations_, ransac_no_iterations_);
-   
-    ransac_remainig_outliers_ = 3;
-    nh.param("ransac_remainig_outliers", ransac_remainig_outliers_, ransac_remainig_outliers_);
-    
-    ransac_convert_outlier_pts_ = true;
-    nh.param("ransac_convert_outlier_pts", ransac_convert_outlier_pts_, ransac_convert_outlier_pts_);
-    
-    ransac_filter_remaining_outlier_pts_ = false;
-    nh.param("ransac_filter_remaining_outlier_pts", ransac_filter_remaining_outlier_pts_, ransac_filter_remaining_outlier_pts_);
+    nh.param("ransac_inlier_distance", ransac_inlier_distance_, 0.2);
+    nh.param("ransac_min_inliers", ransac_min_inliers_, 10);
+    nh.param("ransac_no_iterations", ransac_no_iterations_, 2000);
+    nh.param("ransac_remainig_outliers", ransac_remainig_outliers_, 3);
+    nh.param("ransac_convert_outlier_pts", ransac_convert_outlier_pts_, true);
+    nh.param("ransac_filter_remaining_outlier_pts", ransac_filter_remaining_outlier_pts_, false);
     
     // setup dynamic reconfigure
     dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSRANSACConfig>(nh);

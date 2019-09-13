@@ -61,29 +61,17 @@ CostmapToLinesDBSMCCH::~CostmapToLinesDBSMCCH()
 void CostmapToLinesDBSMCCH::initialize(ros::NodeHandle nh)
 { 
     // DB SCAN
-    parameter_.max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
-    
-    parameter_.min_pts_ = 2;
-    nh.param("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
-    
-    parameter_.max_pts_ = 30;
-    nh.param("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
-    
+    nh.param("cluster_max_distance", parameter_.max_distance_, 0.4);
+    nh.param("cluster_min_pts", parameter_.min_pts_, 2);
+    nh.param("cluster_max_pts", parameter_.max_pts_, 30);
     // convex hull
-    parameter_.min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
+    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, 0.1);
     parameter_buffered_ = parameter_;
     
     // Line extraction
-    support_pts_max_dist_ = 0.3;
-    nh.param("support_pts_max_dist", support_pts_max_dist_, support_pts_max_dist_);
-    
-    support_pts_max_dist_inbetween_ = 1.0;
-    nh.param("support_pts_max_dist_inbetween", support_pts_max_dist_inbetween_, support_pts_max_dist_inbetween_);
-    
-    min_support_pts_ = 2;
-    nh.param("min_support_pts", min_support_pts_, min_support_pts_);
+    nh.param("support_pts_max_dist", support_pts_max_dist_, 0.3);
+    nh.param("support_pts_max_dist_inbetween", support_pts_max_dist_inbetween_, 1.0);
+    nh.param("min_support_pts", min_support_pts_, 2);
     
     // setup dynamic reconfigure
     dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSMCCHConfig>(nh);
