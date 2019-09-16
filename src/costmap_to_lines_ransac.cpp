@@ -60,37 +60,20 @@ CostmapToLinesDBSRANSAC::~CostmapToLinesDBSRANSAC()
 void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
 { 
     // DB SCAN
-    max_distance_ = 0.4; 
-    nh.param("cluster_max_distance", max_distance_, max_distance_);
-    
-    min_pts_ = 2;
-    nh.param("cluster_min_pts", min_pts_, min_pts_);
-    
-    max_pts_ = 30;
-    nh.param("cluster_max_pts", max_pts_, max_pts_);
+    nh.param("cluster_max_distance", parameter_.max_distance_, 0.4);
+    nh.param("cluster_min_pts", parameter_.min_pts_, 2);
+    nh.param("cluster_max_pts", parameter_.max_pts_, 30);
+    // convex hull (only necessary if outlier filtering is enabled)
+    nh.param("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, 0.1);
+    parameter_buffered_ = parameter_;
 
     // ransac
-    ransac_inlier_distance_ = 0.2;
-    nh.param("ransac_inlier_distance", ransac_inlier_distance_, ransac_inlier_distance_);
-    
-    ransac_min_inliers_ = 10;
-    nh.param("ransac_min_inliers", ransac_min_inliers_, ransac_min_inliers_);
-    
-    ransac_no_iterations_ = 2000;
-    nh.param("ransac_no_iterations", ransac_no_iterations_, ransac_no_iterations_);
-   
-    ransac_remainig_outliers_ = 3;
-    nh.param("ransac_remainig_outliers", ransac_remainig_outliers_, ransac_remainig_outliers_);
-    
-    ransac_convert_outlier_pts_ = true;
-    nh.param("ransac_convert_outlier_pts", ransac_convert_outlier_pts_, ransac_convert_outlier_pts_);
-    
-    ransac_filter_remaining_outlier_pts_ = false;
-    nh.param("ransac_filter_remaining_outlier_pts", ransac_filter_remaining_outlier_pts_, ransac_filter_remaining_outlier_pts_);
-    
-    // convex hull (only necessary if outlier filtering is enabled)
-    min_keypoint_separation_ = 0.1;
-    nh.param("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    nh.param("ransac_inlier_distance", ransac_inlier_distance_, 0.2);
+    nh.param("ransac_min_inliers", ransac_min_inliers_, 10);
+    nh.param("ransac_no_iterations", ransac_no_iterations_, 2000);
+    nh.param("ransac_remainig_outliers", ransac_remainig_outliers_, 3);
+    nh.param("ransac_convert_outlier_pts", ransac_convert_outlier_pts_, true);
+    nh.param("ransac_filter_remaining_outlier_pts", ransac_filter_remaining_outlier_pts_, false);
     
     // setup dynamic reconfigure
     dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToLinesDBSRANSACConfig>(nh);
@@ -101,7 +84,7 @@ void CostmapToLinesDBSRANSAC::initialize(ros::NodeHandle nh)
 void CostmapToLinesDBSRANSAC::compute()
 {
     std::vector< std::vector<KeyPoint> > clusters;
-    dbScan(occupied_cells_, clusters);
+    dbScan(clusters);
     
     // Create new polygon container
     PolygonContainerPtr polygons(new std::vector<geometry_msgs::Polygon>());  
@@ -297,16 +280,17 @@ bool CostmapToLinesDBSRANSAC::linearRegression(const std::vector<KeyPoint>& data
 
 void CostmapToLinesDBSRANSAC::reconfigureCB(CostmapToLinesDBSRANSACConfig& config, uint32_t level)
 {
-    max_distance_ = config.cluster_max_distance;
-    min_pts_ = config.cluster_min_pts;
-    max_pts_ = config.cluster_max_pts;
+    boost::mutex::scoped_lock lock(parameter_mutex_);
+    parameter_buffered_.max_distance_ = config.cluster_max_distance;
+    parameter_buffered_.min_pts_ = config.cluster_min_pts;
+    parameter_buffered_.max_pts_ = config.cluster_max_pts;
+    parameter_buffered_.min_keypoint_separation_ = config.cluster_min_pts;
     ransac_inlier_distance_ = config.ransac_inlier_distance;
     ransac_min_inliers_ = config.ransac_min_inliers;
     ransac_no_iterations_ = config.ransac_no_iterations;
     ransac_remainig_outliers_ = config.ransac_remainig_outliers;
     ransac_convert_outlier_pts_ = config.ransac_convert_outlier_pts;
     ransac_filter_remaining_outlier_pts_ = config.ransac_filter_remaining_outlier_pts;
-    min_keypoint_separation_ = config.cluster_min_pts;
 }
 
 
