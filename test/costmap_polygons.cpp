@@ -116,6 +116,19 @@ TEST_F(CostmapToPolygonsDBSMCCHTest, dbScan)
   ASSERT_EQ(costmap_to_polygons.parameters().max_pts_/2 + 1, clusters[2].size()); // second cluster at (1,1)
 }
 
+TEST(CostmapToPolygonsDBSMCCH, EmptyMap)
+{
+  std::shared_ptr<costmap_2d::Costmap2D> costmap =
+    std::make_shared<costmap_2d::Costmap2D>(costmap_2d::Costmap2D(100, 100, 0.1, -5., -5.));
+  CostmapToPolygons costmap_to_polygons;
+  costmap_to_polygons.setCostmap2D(costmap.get());
+
+  std::vector< std::vector<costmap_converter::CostmapToPolygonsDBSMCCH::KeyPoint> > clusters;
+  costmap_to_polygons.dbScan(clusters);
+  ASSERT_EQ(1, clusters.size());    // noise cluster exists
+  ASSERT_EQ(0, clusters[0].size()); // noise clsuter is empty
+}
+
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
