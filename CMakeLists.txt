@@ -224,6 +224,11 @@ install(DIRECTORY
 ## Testing ##
 #############
 
+catkin_add_gtest(costmap_polygons test/costmap_polygons.cpp)
+if(TARGET costmap_polygons)
+   target_link_libraries(costmap_polygons costmap_converter)
+endif()
+
 ## Add gtest based cpp test target and link libraries
 # catkin_add_gtest(${PROJECT_NAME}-test test/test_drawing.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
