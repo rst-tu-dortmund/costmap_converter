@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.11 (2019-10-26)
+-------------------
 * rostest integration to avoid running a roscore separately for unit testing
 * Contributors: Christoph Rösmann
 
