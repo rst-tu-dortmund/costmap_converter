@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.10 (2019-10-26)
+-------------------
 * Runtime improvements for CostmapToPolygonsDBSMCCH (`#12 <https://github.com/rst-tu-dortmund/costmap_converter/issues/12>`_)
   * Grid lookup for regionQuery
   * use a grid structure for looking up nearest neighbors
