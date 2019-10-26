@@ -2,6 +2,20 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Runtime improvements for CostmapToPolygonsDBSMCCH (`#12 <https://github.com/rst-tu-dortmund/costmap_converter/issues/12>`_)
+  * Grid lookup for regionQuery
+  * use a grid structure for looking up nearest neighbors
+  * parameters in a struct
+  * guard the parameters by drawing a copy from dynamic reconfigure
+  * Adding some test cases for regionQuery and dbScan
+  * Avoid computing sqrt at the end of convexHull2
+  * Add doxygen comments for the neighbor lookup
+  * Change the param read to one liners
+  * Add test on empty map for dbScan
+* Contributors: Rainer Kümmerle
+
 0.0.9 (2018-05-28)
 ------------------
 * Moved plugin loader for static costmap conversion to BaseCostmapToDynamicObstacles.
