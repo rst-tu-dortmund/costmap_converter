@@ -2,6 +2,11 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* rostest integration to avoid running a roscore separately for unit testing
+* Contributors: Christoph Rösmann
+
 0.0.10 (2019-10-26)
 -------------------
 * Runtime improvements for CostmapToPolygonsDBSMCCH (`#12 <https://github.com/rst-tu-dortmund/costmap_converter/issues/12>`_)
