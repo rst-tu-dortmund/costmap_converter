@@ -25,6 +25,9 @@ find_package(OpenCV REQUIRED)
 ###find_package(Eigen3 REQUIRED)
 ###set(EXTERNAL_INCLUDE_DIRS ${Eigen3_INCLUDE_DIRS})
 
+if (CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+endif()
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -224,9 +227,11 @@ install(DIRECTORY
 ## Testing ##
 #############
 
-catkin_add_gtest(costmap_polygons test/costmap_polygons.cpp)
-if(TARGET costmap_polygons)
-   target_link_libraries(costmap_polygons costmap_converter)
+if (CATKIN_ENABLE_TESTING)
+  add_rostest_gtest(test_costmap_polygons test/costmap_polygons.test test/costmap_polygons.cpp)
+  if(TARGET test_costmap_polygons)
+     target_link_libraries(test_costmap_polygons costmap_converter)  
+  endif()
 endif()
 
 ## Add gtest based cpp test target and link libraries

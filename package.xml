@@ -23,6 +23,8 @@
   <build_export_depend>message_runtime</build_export_depend>
   <exec_depend>message_runtime</exec_depend>
 
+  <test_depend>rostest</test_depend>
+
   <depend>geometry_msgs</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
