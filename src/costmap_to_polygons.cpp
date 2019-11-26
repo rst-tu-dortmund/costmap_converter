@@ -37,11 +37,69 @@
  *********************************************************************/
 
 #include <costmap_converter/costmap_to_polygons.h>
+#include <costmap_converter/misc.h>
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <pluginlib/class_list_macros.h>
 
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToPolygonsDBSMCCH, costmap_converter::BaseCostmapToPolygons)
+
+namespace
+{
+
+/**
+ * @brief Douglas-Peucker Algorithm for fitting lines into ordered set of points
+ * 
+ * Douglas-Peucker Algorithm, see https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+ * 
+ * @param begin iterator pointing to the begin of the range of points
+ * @param end interator pointing to the end of the range of points
+ * @param epsilon distance criteria for removing points if it is closer to the line segment than this
+ * @param result the simplified polygon
+ */
+std::vector<geometry_msgs::Point32> douglasPeucker(std::vector<geometry_msgs::Point32>::iterator begin,
+  std::vector<geometry_msgs::Point32>::iterator end, double epsilon)
+{
+  if (std::distance(begin, end) <= 2)
+  {
+    return std::vector<geometry_msgs::Point32>(begin, end);
+  }
+
+  // Find the point with the maximum distance from the line [begin, end)
+  double dmax = std::numeric_limits<double>::lowest();
+  std::vector<geometry_msgs::Point32>::iterator max_dist_it;
+  std::vector<geometry_msgs::Point32>::iterator last = std::prev(end);
+  for (auto it = std::next(begin); it != last; ++it)
+  {
+    double d = costmap_converter::computeSquaredDistanceToLineSegment(*it, *begin, *last);
+    if (d > dmax)
+    {
+      max_dist_it = it;
+      dmax = d;
+    }
+  }
+
+  if (dmax < epsilon * epsilon)
+  { // termination criterion reached, line is good enough
+    std::vector<geometry_msgs::Point32> result;
+    result.push_back(*begin);
+    result.push_back(*last);
+    return result;
+  }
+
+  // Recursive calls for the two splitted parts
+  auto firstLineSimplified = douglasPeucker(begin, std::next(max_dist_it), epsilon);
+  auto secondLineSimplified = douglasPeucker(max_dist_it, end, epsilon);
+
+  // Combine the two lines into one line and return the merged line.
+  // Note that we have to skip the first point of the second line, as it is duplicated above.
+  firstLineSimplified.insert(firstLineSimplified.end(),
+    std::make_move_iterator(std::next(secondLineSimplified.begin())),
+    std::make_move_iterator(secondLineSimplified.end()));
+  return firstLineSimplified;
+}
+
+} // end namespace
 
 namespace costmap_converter
 {
@@ -297,16 +355,7 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     // TEST we skip the last point, since in our definition the polygon vertices do not contain the start/end vertex twice.
 //     polygon.points.resize(k-1); // TODO remove last point from the algorithm above to reduce computational cost
 
-    
-    
-    if (parameter_.min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
-    {
-      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
-      {
-        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < parameter_.min_keypoint_separation_ )
-          polygon.points.erase(polygon.points.begin()+i+1);
-      }
-    }
+    simplifyPolygon(polygon);
 }
 
 
@@ -406,15 +455,24 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
         P[minmin].toPointMsg(points.back());
     }
     
-    if (parameter_.min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
-    {
-      double keypoint_sep_sqr = std::pow(parameter_.min_keypoint_separation_, 2);
-      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
-      {
-        if ( std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2) < keypoint_sep_sqr )
-          polygon.points.erase(polygon.points.begin()+i+1);
-      }
-    }
+    simplifyPolygon(polygon);
+}
+
+void CostmapToPolygonsDBSMCCH::simplifyPolygon(geometry_msgs::Polygon& polygon)
+{
+  int triangleThreshold = 3;
+  // check if first and last point are the same. If yes, a triangle has 4 points
+  if (polygon.points.size() > 1
+      && std::abs(polygon.points.front().x - polygon.points.back().x) < 1e-5
+      && std::abs(polygon.points.front().y - polygon.points.back().y) < 1e-5)
+  {
+    triangleThreshold = 4;
+  }
+  if (polygon.points.size() <= triangleThreshold) // nothing to do for triangles or lines
+    return;
+  // TODO Reason about better start conditions for splitting lines, e.g., by
+  // https://en.wikipedia.org/wiki/Rotating_calipers
+  polygon.points = douglasPeucker(polygon.points.begin(), polygon.points.end(), parameter_.min_keypoint_separation_);;
 }
 
 void CostmapToPolygonsDBSMCCH::updatePolygonContainer(PolygonContainerPtr polygons)
@@ -437,7 +495,7 @@ void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& con
   parameter_buffered_.max_distance_ = config.cluster_max_distance;
   parameter_buffered_.min_pts_ = config.cluster_min_pts;
   parameter_buffered_.max_pts_ = config.cluster_max_pts;
-  parameter_buffered_.min_keypoint_separation_ = config.cluster_min_pts;
+  parameter_buffered_.min_keypoint_separation_ = config.convex_hull_min_pt_separation;
 }
 
 }//end namespace costmap_converter

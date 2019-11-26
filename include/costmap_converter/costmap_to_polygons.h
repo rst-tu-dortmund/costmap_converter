@@ -239,6 +239,15 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
      * @todo Evaluate and figure out whether convexHull() or convexHull2() is better suited (performance, quality, ...)
      */  
     void convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::Polygon& polygon);
+
+    /**
+     * @brief Simplify a polygon by removing points.
+     * 
+     * We apply the Douglas-Peucker Algorithm to simplify the edges of the polygon.
+     * Internally, the parameter min_keypoint_separation is used for deciding whether
+     * a point is considered close to an edge and to be merged into the line.
+     */
+    void simplifyPolygon(geometry_msgs::Polygon& polygon);
     
    /**
     * @brief 2D Cross product of two vectors defined by two points and a common origin
