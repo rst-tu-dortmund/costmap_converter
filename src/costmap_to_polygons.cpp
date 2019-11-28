@@ -460,7 +460,7 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
 
 void CostmapToPolygonsDBSMCCH::simplifyPolygon(geometry_msgs::Polygon& polygon)
 {
-  int triangleThreshold = 3;
+  size_t triangleThreshold = 3;
   // check if first and last point are the same. If yes, a triangle has 4 points
   if (polygon.points.size() > 1
       && std::abs(polygon.points.front().x - polygon.points.back().x) < 1e-5
