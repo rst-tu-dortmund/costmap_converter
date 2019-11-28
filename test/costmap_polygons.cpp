@@ -4,6 +4,17 @@
 
 #include <costmap_converter/costmap_to_polygons.h>
 
+namespace {
+geometry_msgs::Point32 create_point(double x, double y)
+{
+  geometry_msgs::Point32 result;
+  result.x = x;
+  result.y = y;
+  result.z = 0.;
+  return result;
+}
+} // end namespace
+
 // make things accesible in the test
 class CostmapToPolygons : public costmap_converter::CostmapToPolygonsDBSMCCH
 {
@@ -14,6 +25,7 @@ class CostmapToPolygons : public costmap_converter::CostmapToPolygonsDBSMCCH
     using costmap_converter::CostmapToPolygonsDBSMCCH::regionQuery;
     using costmap_converter::CostmapToPolygonsDBSMCCH::dbScan;
     using costmap_converter::CostmapToPolygonsDBSMCCH::convexHull2;
+    using costmap_converter::CostmapToPolygonsDBSMCCH::simplifyPolygon;
 };
 
 class CostmapToPolygonsDBSMCCHTest : public ::testing::Test
@@ -127,6 +139,88 @@ TEST(CostmapToPolygonsDBSMCCH, EmptyMap)
   costmap_to_polygons.dbScan(clusters);
   ASSERT_EQ(1, clusters.size());    // noise cluster exists
   ASSERT_EQ(0, clusters[0].size()); // noise clsuter is empty
+}
+
+TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygon)
+{
+  const double simplification_threshold = 0.1;
+  CostmapToPolygons costmap_to_polygons;
+  costmap_to_polygons.parameters().min_keypoint_separation_ = simplification_threshold;
+  
+  geometry_msgs::Polygon polygon;
+  polygon.points.push_back(create_point(0., 0.));
+  polygon.points.push_back(create_point(1., 0.));
+
+  // degenerate case with just two points
+  geometry_msgs::Polygon original_polygon = polygon;
+  costmap_to_polygons.simplifyPolygon(polygon);
+  ASSERT_EQ(2, polygon.points.size());
+  for (size_t i = 0; i < polygon.points.size(); ++i)
+  {
+    ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
+    ASSERT_FLOAT_EQ(original_polygon.points[i].y, polygon.points[i].y);  
+  }
+
+  // degenerate case with three points
+  polygon.points.push_back(create_point(1., simplification_threshold / 2.));
+  original_polygon = polygon;
+  costmap_to_polygons.simplifyPolygon(polygon);
+  ASSERT_EQ(3, polygon.points.size());
+  for (size_t i = 0; i < polygon.points.size(); ++i)
+  {
+    ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
+    ASSERT_FLOAT_EQ(original_polygon.points[i].y, polygon.points[i].y);  
+  }
+
+  polygon.points.push_back(create_point(1., 1.));
+  original_polygon = polygon;
+  // remove the point that has to be removed by the simplification
+  original_polygon.points.erase(original_polygon.points.begin()+2);
+  costmap_to_polygons.simplifyPolygon(polygon);
+  ASSERT_EQ(3, polygon.points.size());
+  for (size_t i = 0; i < polygon.points.size(); ++i)
+  {
+    ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
+    ASSERT_FLOAT_EQ(original_polygon.points[i].y, polygon.points[i].y);
+  }
+}
+
+TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygonPerfectLines)
+{
+  const double simplification_threshold = 0.1;
+  CostmapToPolygons costmap_to_polygons;
+  costmap_to_polygons.parameters().min_keypoint_separation_ = simplification_threshold;
+  
+  geometry_msgs::Polygon polygon;
+  for (int i = 0; i <= 100; ++i)
+    polygon.points.push_back(create_point(i*1., 0.));
+  geometry_msgs::Point32 lastPoint = polygon.points.back();
+  for (int i = 0; i <= 100; ++i)
+    polygon.points.push_back(create_point(lastPoint.x, lastPoint.y + i * 1.));
+  lastPoint = polygon.points.back();
+  for (int i = 0; i <= 100; ++i)
+    polygon.points.push_back(create_point(lastPoint.x + i * 1., lastPoint.y));
+  lastPoint = polygon.points.back();
+  for (int i = 0; i <= 100; ++i)
+    polygon.points.push_back(create_point(lastPoint.x, lastPoint.y + i * 1.));
+  lastPoint = polygon.points.back();
+  for (int i = 0; i <= 100; ++i)
+    polygon.points.push_back(create_point(lastPoint.x + i * 1., lastPoint.y));
+
+  costmap_to_polygons.simplifyPolygon(polygon);
+  ASSERT_EQ(6, polygon.points.size());
+  ASSERT_FLOAT_EQ(  0., polygon.points[0].x);
+  ASSERT_FLOAT_EQ(  0., polygon.points[0].y);
+  ASSERT_FLOAT_EQ(100., polygon.points[1].x);
+  ASSERT_FLOAT_EQ(  0., polygon.points[1].y);
+  ASSERT_FLOAT_EQ(100., polygon.points[2].x);
+  ASSERT_FLOAT_EQ(100., polygon.points[2].y);
+  ASSERT_FLOAT_EQ(200., polygon.points[3].x);
+  ASSERT_FLOAT_EQ(100., polygon.points[3].y);
+  ASSERT_FLOAT_EQ(200., polygon.points[4].x);
+  ASSERT_FLOAT_EQ(200., polygon.points[4].y);
+  ASSERT_FLOAT_EQ(300., polygon.points[5].x);
+  ASSERT_FLOAT_EQ(200., polygon.points[5].y);
 }
 
 int main(int argc, char** argv)
