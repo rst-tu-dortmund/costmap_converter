@@ -527,6 +527,9 @@ void AssignmentProblemSolver::assignmentsuboptimal1(assignments_t& assignment, t
   {
     if (!finiteValueFound)
     {
+      free(nOfValidTracks);
+      free(nOfValidObservations);
+      free(distMatrix);
       return;
     }
     bool repeatSteps = true;
