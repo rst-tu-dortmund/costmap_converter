@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.12 (2019-12-02)
+-------------------
 * CostmapToPolygons: Simplification of the polygon by Douglas-Peucker algorithm (reduces the density of points in the polygon).
 * Bugfixes
 * Contributors: Rainer Kümmerle
