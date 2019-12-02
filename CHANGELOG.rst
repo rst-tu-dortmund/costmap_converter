@@ -2,6 +2,12 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* CostmapToPolygons: Simplification of the polygon by Douglas-Peucker algorithm (reduces the density of points in the polygon).
+* Bugfixes
+* Contributors: Rainer Kümmerle
+
 0.0.11 (2019-10-26)
 -------------------
 * rostest integration to avoid running a roscore separately for unit testing
