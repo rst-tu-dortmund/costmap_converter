@@ -1,0 +1,3 @@
+<launch>
+  <test test-name="costmap_polygons" pkg="costmap_converter" type="test_costmap_polygons" />
+</launch>

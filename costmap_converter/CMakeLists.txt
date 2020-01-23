@@ -15,6 +15,9 @@ find_package(costmap_converter_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -25,6 +28,9 @@ set(dependencies
     cv_bridge
     geometry_msgs
     nav2_costmap_2d
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
     OpenCV
     pluginlib
     rclcpp
@@ -80,4 +86,14 @@ ament_export_include_directories(include)
 ament_export_libraries(costmap_converter)
 ament_export_dependencies(${dependencies})
 pluginlib_export_plugin_description_file(costmap_converter plugins.xml)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_costmap_polygons test/costmap_polygons.cpp)
+  if(TARGET test_costmap_polygons)
+    target_link_libraries(test_costmap_polygons costmap_converter)  
+  endif()
+  ament_target_dependencies(test_costmap_polygons ${dependencies})
+endif()
+
 ament_package()

@@ -216,7 +216,7 @@ public:
      */
     void stopWorker()
     {
-      worker_timer_->cancel();
+      if (worker_timer_) worker_timer_->cancel();
       if (spin_thread_)
       {
         {

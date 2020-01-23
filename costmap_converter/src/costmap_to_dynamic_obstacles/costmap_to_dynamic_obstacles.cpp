@@ -394,7 +394,11 @@ void CostmapToDynamicObstacles::odomCallback(const nav_msgs::msg::Odometry::Cons
   tf2::fromMsg(msg->pose.pose.orientation, pose);
 
   tf2::Vector3 twistLinear;
-  tf2::fromMsg(msg->twist.twist.linear, twistLinear);
+  // tf2::fromMsg(msg->twist.twist.linear, twistLinear); // not available in tf2
+  twistLinear.setX(msg->twist.twist.linear.x);
+  twistLinear.setY(msg->twist.twist.linear.y);
+  twistLinear.setZ(msg->twist.twist.linear.z);
+
 
   // velocity of the robot in x, y and z coordinates
   tf2::Vector3 vel = tf2::quatRotate(pose, twistLinear);
