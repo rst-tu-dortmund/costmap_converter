@@ -37,9 +37,67 @@
  *********************************************************************/
 
 #include <costmap_converter/costmap_to_polygons.h>
+#include <costmap_converter/misc.h>
 #include <pluginlib/class_list_macros.hpp>
 
 PLUGINLIB_EXPORT_CLASS(costmap_converter::CostmapToPolygonsDBSMCCH, costmap_converter::BaseCostmapToPolygons)
+
+namespace
+{
+
+/**
+ * @brief Douglas-Peucker Algorithm for fitting lines into ordered set of points
+ *
+ * Douglas-Peucker Algorithm, see https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm
+ *
+ * @param begin iterator pointing to the begin of the range of points
+ * @param end interator pointing to the end of the range of points
+ * @param epsilon distance criteria for removing points if it is closer to the line segment than this
+ * @param result the simplified polygon
+ */
+std::vector<geometry_msgs::msg::Point32> douglasPeucker(std::vector<geometry_msgs::msg::Point32>::iterator begin,
+  std::vector<geometry_msgs::msg::Point32>::iterator end, double epsilon)
+{
+  if (std::distance(begin, end) <= 2)
+  {
+    return std::vector<geometry_msgs::msg::Point32>(begin, end);
+  }
+
+  // Find the point with the maximum distance from the line [begin, end)
+  double dmax = std::numeric_limits<double>::lowest();
+  std::vector<geometry_msgs::msg::Point32>::iterator max_dist_it;
+  std::vector<geometry_msgs::msg::Point32>::iterator last = std::prev(end);
+  for (auto it = std::next(begin); it != last; ++it)
+  {
+    double d = costmap_converter::computeSquaredDistanceToLineSegment(*it, *begin, *last);
+    if (d > dmax)
+    {
+      max_dist_it = it;
+      dmax = d;
+    }
+  }
+
+  if (dmax < epsilon * epsilon)
+  { // termination criterion reached, line is good enough
+    std::vector<geometry_msgs::msg::Point32> result;
+    result.push_back(*begin);
+    result.push_back(*last);
+    return result;
+  }
+
+  // Recursive calls for the two splitted parts
+  auto firstLineSimplified = douglasPeucker(begin, std::next(max_dist_it), epsilon);
+  auto secondLineSimplified = douglasPeucker(max_dist_it, end, epsilon);
+
+  // Combine the two lines into one line and return the merged line.
+  // Note that we have to skip the first point of the second line, as it is duplicated above.
+  firstLineSimplified.insert(firstLineSimplified.end(),
+    std::make_move_iterator(std::next(secondLineSimplified.begin())),
+    std::make_move_iterator(secondLineSimplified.end()));
+  return firstLineSimplified;
+}
+
+} // end namespace
 
 namespace costmap_converter
 {
@@ -47,7 +105,9 @@ namespace costmap_converter
 CostmapToPolygonsDBSMCCH::CostmapToPolygonsDBSMCCH() : BaseCostmapToPolygons()
 {
   costmap_ = NULL;
-//  dynamic_recfg_ = NULL;
+  // dynamic_recfg_ = NULL;
+  neighbor_size_x_ = neighbor_size_y_ = -1;
+  offset_x_ = offset_y_ = 0.;
 }
 
 CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH()
@@ -59,20 +119,22 @@ CostmapToPolygonsDBSMCCH::~CostmapToPolygonsDBSMCCH()
 void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 {
     BaseCostmapToPolygons::initialize(nh);
-    
+
     costmap_ = NULL;
 
-    max_distance_ = 0.4;
-    nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);
+    parameter_.max_distance_ = 0.4;
+    nh->get_parameter_or<double>("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
 
-    min_pts_ = 2;
-    nh->get_parameter_or<int>("cluster_min_pts", min_pts_, min_pts_);
+    parameter_.min_pts_ = 2;
+    nh->get_parameter_or<int>("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
 
-    max_pts_ = 30;
-    nh->get_parameter_or<int>("cluster_max_pts", max_pts_, max_pts_);
+    parameter_.max_pts_ = 30;
+    nh->get_parameter_or<int>("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
 
-    min_keypoint_separation_ = 0.1;
-    nh->get_parameter_or<double>("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    parameter_.min_keypoint_separation_ = 0.1;
+    nh->get_parameter_or<double>("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
+
+    parameter_buffered_ = parameter_;
 
     // setup dynamic reconfigure
 //    dynamic_recfg_ = new dynamic_reconfigure::Server<CostmapToPolygonsDBSMCCHConfig>(nh);
@@ -84,7 +146,7 @@ void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 void CostmapToPolygonsDBSMCCH::compute()
 {
     std::vector< std::vector<KeyPoint> > clusters;
-    dbScan(occupied_cells_, clusters);
+    dbScan(clusters);
 
     // Create new polygon container
     PolygonContainerPtr polygons(new std::vector<geometry_msgs::msg::Polygon>());
@@ -131,9 +193,27 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
         return;
       }
 
-      int idx = 0;
+      // TODO: currently dynamic reconigure is not supported in ros2
+      { // get a copy of our parameters from dynamic reconfigure
+        std::lock_guard<std::mutex> lock(parameter_mutex_);
+        parameter_ = parameter_buffered_;
+      }
 
       std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*costmap_->getMutex());
+
+      // allocate neighbor lookup
+      int cells_x = int(costmap_->getSizeInMetersX() / parameter_.max_distance_) + 1;
+      int cells_y = int(costmap_->getSizeInMetersY() / parameter_.max_distance_) + 1;
+
+      if (cells_x != neighbor_size_x_ || cells_y != neighbor_size_y_) {
+        neighbor_size_x_ = cells_x;
+        neighbor_size_y_ = cells_y;
+        neighbor_lookup_.resize(neighbor_size_x_ * neighbor_size_y_);
+      }
+      offset_x_ = costmap_->getOriginX();
+      offset_y_ = costmap_->getOriginY();
+      for (auto& n : neighbor_lookup_)
+        n.clear();
 
       // get indices of obstacle cells
       for(std::size_t i = 0; i < costmap_->getSizeInCellsX(); i++)
@@ -145,33 +225,32 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
           {
             double x, y;
             costmap_->mapToWorld((unsigned int)i, (unsigned int)j, x, y);
-            occupied_cells_.push_back( KeyPoint( x, y ) );
+            addPoint(x, y);
           }
-          ++idx;
         }
       }
 }
 
 
-void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cells, std::vector< std::vector<KeyPoint> >& clusters)
+void CostmapToPolygonsDBSMCCH::dbScan(std::vector< std::vector<KeyPoint> >& clusters)
 {
-  std::vector<bool> visited(occupied_cells.size(), false);
+  std::vector<bool> visited(occupied_cells_.size(), false);
 
   clusters.clear();
 
   //DB Scan Algorithm
   int cluster_id = 0; // current cluster_id
   clusters.push_back(std::vector<KeyPoint>());
-  for(int i = 0; i< (int)occupied_cells.size(); i++)
+  for(int i = 0; i< (int)occupied_cells_.size(); i++)
   {
     if(!visited[i]) //keypoint has not been visited before
     {
       visited[i] = true; // mark as visited
       std::vector<int> neighbors;
-      regionQuery(occupied_cells, i, neighbors); //Find neighbors around the keypoint
-      if((int)neighbors.size() < min_pts_) //If not enough neighbors are found, mark as noise
+      regionQuery(i, neighbors); //Find neighbors around the keypoint
+      if((int)neighbors.size() < parameter_.min_pts_) //If not enough neighbors are found, mark as noise
       {
-        clusters[0].push_back(occupied_cells[i]);
+        clusters[0].push_back(occupied_cells_[i]);
       }
       else
       {
@@ -179,27 +258,27 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
         clusters.push_back(std::vector<KeyPoint>());
 
         // Expand the cluster
-        clusters[cluster_id].push_back(occupied_cells[i]);
+        clusters[cluster_id].push_back(occupied_cells_[i]);
         for(int j = 0; j<(int)neighbors.size(); j++)
         {
-          if ((int)clusters[cluster_id].size() == max_pts_)
+          if ((int)clusters[cluster_id].size() == parameter_.max_pts_)
             break;
 
           if(!visited[neighbors[j]]) //keypoint has not been visited before
           {
             visited[neighbors[j]] = true;  // mark as visited
             std::vector<int> further_neighbors;
-            regionQuery(occupied_cells, neighbors[j], further_neighbors); //Find more neighbors around the new keypoint
+            regionQuery(neighbors[j], further_neighbors); //Find more neighbors around the new keypoint
 //             if(further_neighbors.size() < min_pts_)
 //             {
 //               clusters[0].push_back(occupied_cells[neighbors[j]]);
 //             }
 //             else
-            if ((int)further_neighbors.size() >= min_pts_)
+            if ((int)further_neighbors.size() >= parameter_.min_pts_)
             {
               // neighbors found
               neighbors.insert(neighbors.end(), further_neighbors.begin(), further_neighbors.end());  //Add these newfound P' neighbour to P neighbour vector "nb_indeces"
-              clusters[cluster_id].push_back(occupied_cells[neighbors[j]]);
+              clusters[cluster_id].push_back(occupied_cells_[neighbors[j]]);
             }
           }
         }
@@ -208,19 +287,35 @@ void CostmapToPolygonsDBSMCCH::dbScan(const std::vector<KeyPoint>& occupied_cell
   }
 }
 
-void CostmapToPolygonsDBSMCCH::regionQuery(const std::vector<KeyPoint>& occupied_cells, int curr_index, std::vector<int>& neighbors)
+void CostmapToPolygonsDBSMCCH::regionQuery(int curr_index, std::vector<int>& neighbors)
 {
     neighbors.clear();
-    double curr_index_x = occupied_cells[curr_index].x;
-    double curr_index_y = occupied_cells[curr_index].y;
 
-    for(int i = 0; i < (int)occupied_cells.size(); i++)
+    double dist_sqr_threshold = parameter_.max_distance_ * parameter_.max_distance_;
+    const KeyPoint& kp = occupied_cells_[curr_index];
+    int cx, cy;
+    pointToNeighborCells(kp, cx,cy);
+
+    // loop over the neighboring cells for looking up the points
+    const int offsets[9][2] = {{-1, -1}, {0, -1}, {1, -1},
+                               {-1,  0}, {0,  0}, {1,  0},
+                               {-1,  1}, {0,  1}, {1,  1}};
+    for (int i = 0; i < 9; ++i)
     {
-      double neighbor_x = occupied_cells[i].x;
-      double neighbor_y = occupied_cells[i].y;
-      double dist = sqrt(pow((curr_index_x - neighbor_x),2)+pow((curr_index_y - neighbor_y),2));	//euclidean distance between two points // TODO map resolution
-      if(dist <= max_distance_ && dist != 0.0f)
-        neighbors.push_back(i);
+      int idx = neighborCellsToIndex(cx + offsets[i][0], cy + offsets[i][1]);
+      if (idx < 0 || idx >= int(neighbor_lookup_.size()))
+        continue;
+      const std::vector<int>& pointIndicesToCheck = neighbor_lookup_[idx];
+      for (int point_idx : pointIndicesToCheck) {
+        if (point_idx == curr_index) // point is not a neighbor to itself
+          continue;
+        const KeyPoint& other = occupied_cells_[point_idx];
+        double dx = other.x - kp.x;
+        double dy = other.y - kp.y;
+        double dist_sqr = dx*dx + dy*dy;
+        if (dist_sqr <= dist_sqr_threshold)
+          neighbors.push_back(point_idx);
+      }
     }
 }
 
@@ -268,38 +363,18 @@ void CostmapToPolygonsDBSMCCH::convexHull(std::vector<KeyPoint>& cluster, geomet
     // TEST we skip the last point, since in our definition the polygon vertices do not contain the start/end vertex twice.
 //     polygon.points.resize(k-1); // TODO remove last point from the algorithm above to reduce computational cost
 
-
-
-    if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
-    {
-      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
-      {
-        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < min_keypoint_separation_ )
-          polygon.points.erase(polygon.points.begin()+i+1);
-      }
-    }
+    simplifyPolygon(polygon);
 }
 
 
 
 void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geometry_msgs::msg::Polygon& polygon)
 {
-    std::vector<KeyPoint> P = cluster;
+    std::vector<KeyPoint>& P = cluster;
     std::vector<geometry_msgs::msg::Point32>& points = polygon.points;
 
     // Sort P by x and y
-    for (int i = 0; i < (int)P.size(); i++)
-    {
-        for (int j = i + 1; j < (int)P.size(); j++)
-        {
-            if (P[j].x < P[i].x || (P[j].x == P[i].x && P[j].y < P[i].y))
-            {
-                KeyPoint tmp = P[i];
-                P[i] = P[j];
-                P[j] = tmp;
-            }
-        }
-    }
+    std::sort(P.begin(), P.end(), isXCoordinateSmaller);
 
     // the output array H[] will be used as the stack
     int i;                 // array scan index
@@ -388,14 +463,24 @@ void CostmapToPolygonsDBSMCCH::convexHull2(std::vector<KeyPoint>& cluster, geome
         P[minmin].toPointMsg(points.back());
     }
 
-    if (min_keypoint_separation_>0) // TODO maybe migrate to algorithm above to speed up computation
-    {
-      for (int i=0; i < (int) polygon.points.size() - 1; ++i)
-      {
-        if ( std::sqrt(std::pow((polygon.points[i].x - polygon.points[i+1].x),2) + std::pow((polygon.points[i].y - polygon.points[i+1].y),2)) < min_keypoint_separation_ )
-          polygon.points.erase(polygon.points.begin()+i+1);
-      }
-    }
+    simplifyPolygon(polygon);
+}
+
+void CostmapToPolygonsDBSMCCH::simplifyPolygon(geometry_msgs::msg::Polygon& polygon)
+{
+  size_t triangleThreshold = 3;
+  // check if first and last point are the same. If yes, a triangle has 4 points
+  if (polygon.points.size() > 1
+      && std::abs(polygon.points.front().x - polygon.points.back().x) < 1e-5
+      && std::abs(polygon.points.front().y - polygon.points.back().y) < 1e-5)
+  {
+    triangleThreshold = 4;
+  }
+  if (polygon.points.size() <= triangleThreshold) // nothing to do for triangles or lines
+    return;
+  // TODO Reason about better start conditions for splitting lines, e.g., by
+  // https://en.wikipedia.org/wiki/Rotating_calipers
+  polygon.points = douglasPeucker(polygon.points.begin(), polygon.points.end(), parameter_.min_keypoint_separation_);;
 }
 
 void CostmapToPolygonsDBSMCCH::updatePolygonContainer(PolygonContainerPtr polygons)
@@ -414,10 +499,11 @@ PolygonContainerConstPtr CostmapToPolygonsDBSMCCH::getPolygons()
 
 //void CostmapToPolygonsDBSMCCH::reconfigureCB(CostmapToPolygonsDBSMCCHConfig& config, uint32_t level)
 //{
-//    max_distance_ = config.cluster_max_distance;
-//    min_pts_ = config.cluster_min_pts;
-//    max_pts_ = config.cluster_max_pts;
-//    min_keypoint_separation_ = config.cluster_min_pts;
+  //boost::mutex::scoped_lock lock(parameter_mutex_);
+  //parameter_buffered_.max_distance_ = config.cluster_max_distance;
+  //parameter_buffered_.min_pts_ = config.cluster_min_pts;
+  //parameter_buffered_.max_pts_ = config.cluster_max_pts;
+  //parameter_buffered_.min_keypoint_separation_ = config.convex_hull_min_pt_separation;
 //}
 
 }//end namespace costmap_converter

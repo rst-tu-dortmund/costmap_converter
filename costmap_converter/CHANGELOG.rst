@@ -4,9 +4,34 @@ Changelog for package costmap_converter
 
 Forthcoming
 -----------
-* Port to the latest ROS2 distro (Dashing)
+* Port to ROS2 (thanks to Vinnam Kim and stevemacenski)
 * Messages moved to a separate package
-* Contributors: Vinnam Kim
+* Contributors: Christoph Rösmann, Vinnam Kim, stevemacenski
+
+0.0.12 (2019-12-02)
+-------------------
+* CostmapToPolygons: Simplification of the polygon by Douglas-Peucker algorithm (reduces the density of points in the polygon).
+* Bugfixes
+* Contributors: Rainer Kümmerle
+
+0.0.11 (2019-10-26)
+-------------------
+* rostest integration to avoid running a roscore separately for unit testing
+* Contributors: Christoph Rösmann
+
+0.0.10 (2019-10-26)
+-------------------
+* Runtime improvements for CostmapToPolygonsDBSMCCH (`#12 <https://github.com/rst-tu-dortmund/costmap_converter/issues/12>`_)
+  * Grid lookup for regionQuery
+  * use a grid structure for looking up nearest neighbors
+  * parameters in a struct
+  * guard the parameters by drawing a copy from dynamic reconfigure
+  * Adding some test cases for regionQuery and dbScan
+  * Avoid computing sqrt at the end of convexHull2
+  * Add doxygen comments for the neighbor lookup
+  * Change the param read to one liners
+  * Add test on empty map for dbScan
+* Contributors: Rainer Kümmerle
 
 0.0.9 (2018-05-28)
 ------------------

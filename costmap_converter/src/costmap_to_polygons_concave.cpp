@@ -60,18 +60,20 @@ void CostmapToPolygonsDBSConcaveHull::initialize(rclcpp::Node::SharedPtr nh)
 { 
     BaseCostmapToPolygons::initialize(nh);
     
-    max_distance_ = 0.4; 
-    nh->get_parameter_or<double>("cluster_max_distance", max_distance_, max_distance_);
+    parameter_.max_distance_ = 0.4; 
+    nh->get_parameter_or<double>("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
     
-    min_pts_ = 2;
-    nh->get_parameter_or<int>("cluster_min_pts", min_pts_, min_pts_);
+    parameter_.min_pts_ = 2;
+    nh->get_parameter_or<int>("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
     
-    max_pts_ = 30;
-    nh->get_parameter_or<int>("cluster_max_pts", max_pts_, max_pts_);
+    parameter_.max_pts_ = 30;
+    nh->get_parameter_or<int>("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
     
-    min_keypoint_separation_ = 0.1;
-    nh->get_parameter_or<double>("convex_hull_min_pt_separation", min_keypoint_separation_, min_keypoint_separation_);
+    parameter_.min_keypoint_separation_ = 0.1;
+    nh->get_parameter_or<double>("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
     
+    parameter_buffered_ = parameter_;
+
     concave_hull_depth_ = 2.0;
     nh->get_parameter_or<double>("concave_hull_depth", concave_hull_depth_, concave_hull_depth_);
     
@@ -85,7 +87,7 @@ void CostmapToPolygonsDBSConcaveHull::initialize(rclcpp::Node::SharedPtr nh)
 void CostmapToPolygonsDBSConcaveHull::compute()
 {
     std::vector< std::vector<KeyPoint> > clusters;
-    dbScan(occupied_cells_, clusters);
+    dbScan(clusters);
     
     // Create new polygon container
     PolygonContainerPtr polygons(new std::vector<geometry_msgs::msg::Polygon>());
@@ -216,10 +218,11 @@ void CostmapToPolygonsDBSConcaveHull::concaveHullClusterCut(std::vector<KeyPoint
 
 //void CostmapToPolygonsDBSConcaveHull::reconfigureCB(CostmapToPolygonsDBSConcaveHullConfig& config, uint32_t level)
 //{
-//    max_distance_ = config.cluster_max_distance;
-//    min_pts_ = config.cluster_min_pts;
-//    max_pts_ = config.cluster_max_pts;
-//    min_keypoint_separation_ = config.cluster_min_pts;
+//    boost::mutex::scoped_lock lock(parameter_mutex_);
+//    parameter_buffered_.max_distance_ = config.cluster_max_distance;
+//    parameter_buffered_.min_pts_ = config.cluster_min_pts;
+//    parameter_buffered_.max_pts_ = config.cluster_max_pts;
+//    parameter_buffered_.min_keypoint_separation_ = config.cluster_min_pts;
 //    concave_hull_depth_ = config.concave_hull_depth;
 //}
 
