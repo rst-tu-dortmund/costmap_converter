@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.0 (2020-01-23)
+------------------
 * Port to ROS2 (thanks to Vinnam Kim and stevemacenski)
 * Messages moved to a separate package
 * Contributors: Christoph Rösmann, Vinnam Kim, stevemacenski

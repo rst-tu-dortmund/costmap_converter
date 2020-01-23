@@ -2,8 +2,8 @@
 Changelog for package costmap_converter_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.0 (2020-01-23)
+------------------
 * Messages moved to a separate package
 * Contributors: Vinnam Kim
 
