@@ -18,7 +18,7 @@ void BlobDetector::detect(const cv::Mat& image, std::vector<cv::KeyPoint>& keypo
   keypoints.clear();
   cv::Mat grayscale_image;
   if (image.channels() == 3)
-    cv::cvtColor(image, grayscale_image, CV_BGR2GRAY);
+    cv::cvtColor(image, grayscale_image, cv::COLOR_BGR2GRAY);
   else
     grayscale_image = image;
 
@@ -99,7 +99,7 @@ void BlobDetector::findBlobs(const cv::Mat& image, const cv::Mat& binary_image, 
 
   std::vector<std::vector<cv::Point>> contours;
   cv::Mat tmp_binary_image = binary_image.clone();
-  cv::findContours(tmp_binary_image, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+  cv::findContours(tmp_binary_image, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 
   for (std::size_t contour_idx = 0; contour_idx < contours.size(); ++contour_idx)
   {
