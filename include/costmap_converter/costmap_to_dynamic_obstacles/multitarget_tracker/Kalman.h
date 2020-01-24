@@ -3,7 +3,7 @@
 
 #pragma once
 #include "defines.h"
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 
 // http://www.morethantechnical.com/2011/06/17/simple-kalman-filter-for-tracking-using-opencv-2-2-w-code/
 class TKalmanFilter
