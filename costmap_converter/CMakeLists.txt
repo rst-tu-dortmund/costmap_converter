@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(costmap_converter)
 
+# Set to Release in order to speed up the program significantly
+set(CMAKE_BUILD_TYPE Release) #None, Debug, Release, RelWithDebInfo, MinSizeRel
+
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
