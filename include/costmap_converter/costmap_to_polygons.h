@@ -298,7 +298,7 @@ class CostmapToPolygonsDBSMCCH : public BaseCostmapToPolygons
       * @param cx output cell index in x direction
       * @param cy output cell index in y direction
       */
-    int pointToNeighborCells(const KeyPoint& kp, int& cx, int& cy)
+    void pointToNeighborCells(const KeyPoint& kp, int& cx, int& cy)
     {
       cx = int((kp.x - offset_x_) / parameter_.max_distance_);
       cy = int((kp.y - offset_y_) / parameter_.max_distance_);
