@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.13 (2020-05-13)
+-------------------
 * Changed minimum CMake version to 3.1
 * Fixed wrong return type of method pointToNeighborCells
 * OpenCV 4 compatibility fix (Thanks to daviddudas)

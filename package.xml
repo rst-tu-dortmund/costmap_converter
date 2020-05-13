@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>costmap_converter</name>
-  <version>0.0.12</version>
+  <version>0.0.13</version>
   <description>
     A ros package that includes plugins and nodes to convert occupied costmap2d cells to primitive types.
   </description>
