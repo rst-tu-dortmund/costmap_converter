@@ -2,6 +2,13 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Changed minimum CMake version to 3.1
+* Fixed wrong return type of method pointToNeighborCells
+* OpenCV 4 compatibility fix (Thanks to daviddudas)
+* Contributors: Christoph Rösmann, daviddudas
+
 0.0.12 (2019-12-02)
 -------------------
 * CostmapToPolygons: Simplification of the polygon by Douglas-Peucker algorithm (reduces the density of points in the polygon).
