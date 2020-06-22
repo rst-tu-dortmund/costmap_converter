@@ -2,8 +2,8 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.2 (2020-06-22)
+------------------
 * OpenCV 4 compatibility fix
 * Contributors: daviddudas
 
