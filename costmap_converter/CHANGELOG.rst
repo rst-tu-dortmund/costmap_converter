@@ -2,6 +2,11 @@
 Changelog for package costmap_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* OpenCV 4 compatibility fix
+* Contributors: daviddudas
+
 0.1.1 (2020-01-25)
 ------------------
 * Fixed ament plugin export

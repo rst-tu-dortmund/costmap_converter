@@ -2,6 +2,9 @@
 Changelog for package costmap_converter_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.1.1 (2020-01-25)
 ------------------
 
