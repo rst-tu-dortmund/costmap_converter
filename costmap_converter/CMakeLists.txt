@@ -73,7 +73,7 @@ install(TARGETS costmap_converter
    DESTINATION lib
 )
 install(TARGETS standalone_converter
-   DESTINATION bin
+   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
