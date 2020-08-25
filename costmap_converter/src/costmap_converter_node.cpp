@@ -68,7 +68,7 @@ class CostmapStandaloneConversion : public rclcpp::Node {
     // load converter plugin from parameter server, otherwise set default
 
     std::string converter_plugin =
-        "costmap_converter::CostmapToPolygonsDBSConcaveHull";
+        "costmap_converter::CostmapToPolygonsDBSMCCHs";
 
     declare_parameter("converter_plugin",
                       rclcpp::ParameterValue(converter_plugin));
