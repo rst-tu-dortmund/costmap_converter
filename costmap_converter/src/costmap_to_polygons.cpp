@@ -122,13 +122,13 @@ void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 
     costmap_ = NULL;
 
-    parameter_.max_distance_ = 0.4;
+    parameter_.max_distance_ = 0.2;
     nh->get_parameter_or<double>("cluster_max_distance", parameter_.max_distance_, parameter_.max_distance_);
 
     parameter_.min_pts_ = 2;
     nh->get_parameter_or<int>("cluster_min_pts", parameter_.min_pts_, parameter_.min_pts_);
 
-    parameter_.max_pts_ = 30;
+    parameter_.max_pts_ = 1000;
     nh->get_parameter_or<int>("cluster_max_pts", parameter_.max_pts_, parameter_.max_pts_);
 
     parameter_.min_keypoint_separation_ = 0.1;
