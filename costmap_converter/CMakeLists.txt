@@ -69,6 +69,8 @@ ament_target_dependencies(standalone_converter
   ${dependencies}
 )
 
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+
 install(TARGETS costmap_converter
    DESTINATION lib
 )
