@@ -52,7 +52,7 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='costmap_converter', node_executable='standalone_converter', output='screen',
             parameters=[{"rolling_window": False,
-                         "map_topic": "/rdenizaksoy_hybrid_astar/map",
+                         "map_topic": "/occupancy_grid",
                          "static_layer.subscribe_to_updates": True,
                          "static_layer.map_subscribe_transient_local": False
                          }],
