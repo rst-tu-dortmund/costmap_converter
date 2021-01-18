@@ -133,8 +133,6 @@ void CostmapToPolygonsDBSMCCH::initialize(rclcpp::Node::SharedPtr nh)
 
     parameter_.min_keypoint_separation_ = 0.07;
     nh->get_parameter_or<double>("convex_hull_min_pt_separation", parameter_.min_keypoint_separation_, parameter_.min_keypoint_separation_);
-    RCLCPP_INFO(getLogger(), "Configured parameters loaded: cluster_max_pts %s",
-                parameter_.max_pts_.c_str());
 
     parameter_buffered_ = parameter_;
 
