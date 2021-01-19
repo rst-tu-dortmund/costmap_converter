@@ -18,9 +18,7 @@ def generate_launch_description():
     use_namespace = LaunchConfiguration('use_namespace')
     bringup_dir = get_package_share_directory('nav2_bringup')
     params_file = LaunchConfiguration('params_file')
-    remappings = [((namespace, '/tf'), '/tf'),
-                  ((namespace, '/tf_static'), '/tf_static'),
-                  ('/tf', 'tf'),
+    remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
 
     configured_params = RewrittenYaml(
@@ -43,9 +41,6 @@ def generate_launch_description():
             'namespace', default_value='',
             description='Top-level namespace'),
         DeclareLaunchArgument(
-            'rviz_prefix', default_value='',
-            description='Top-level rviz prefix'),
-        DeclareLaunchArgument(
             'params_file',
             default_value=os.path.join(bringup_dir, 'params', 'costmap_params.yaml'),
             description='Full path to the ROS2 parameters file to use'),
@@ -55,9 +50,10 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='costmap_converter', node_executable='standalone_converter', output='screen',
             parameters=[{"rolling_window": False,
-                         "map_topic": ("/", LaunchConfiguration("rviz_prefix") , "server_costmap_node/map"),
+                         "map_topic": ("/costmap_node/map"),
                          "static_layer.subscribe_to_updates": True,
                          "static_layer.map_subscribe_transient_local": True
-                         }],
+                         }],                                                                             
+            remappings=remappings 
         ),
     ])
