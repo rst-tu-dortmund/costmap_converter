@@ -55,9 +55,9 @@ def generate_launch_description():
         launch_ros.actions.Node(
             package='costmap_converter', node_executable='standalone_converter', output='screen',
             parameters=[{"rolling_window": False,
-                         "map_topic": ("/", LaunchConfiguration("rviz_prefix") , "costmap_node/map"),
+                         "map_topic": ("/", LaunchConfiguration("rviz_prefix") , "server_costmap_node/map"),
                          "static_layer.subscribe_to_updates": True,
-                         "static_layer.map_subscribe_transient_local": False
+                         "static_layer.map_subscribe_transient_local": True
                          }],
         ),
     ])

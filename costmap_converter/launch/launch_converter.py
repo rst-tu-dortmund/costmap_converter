@@ -18,10 +18,13 @@ def generate_launch_description():
     use_namespace = LaunchConfiguration('use_namespace')
     bringup_dir = get_package_share_directory('nav2_bringup')
     params_file = LaunchConfiguration('params_file')
-    remappings = [((namespace, '/tf'), '/tf'),
-                  ((namespace, '/tf_static'), '/tf_static'),
-                  ('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
+#    remappings = [((namespace, '/tf'), '/tf'),
+#                  ((namespace, '/tf_static'), '/tf_static'),
+#                  ('/tf', 'tf'),
+#                  ('/tf_static', 'tf_static')]
+
+    remappings = [('/tf', 'tf'),
+                              ('/tf_static', 'tf_static')]
 
     configured_params = RewrittenYaml(
         source_file=params_file,
@@ -54,7 +57,8 @@ def generate_launch_description():
             parameters=[{"rolling_window": False,
                          "map_topic": "/occupancy_grid",
                          "static_layer.subscribe_to_updates": True,
-                         "static_layer.map_subscribe_transient_local": False
+                         "static_layer.map_subscribe_transient_local": True
                          }],
+                        remappings=remappings
         ),
     ])
