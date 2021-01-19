@@ -18,13 +18,9 @@ def generate_launch_description():
     use_namespace = LaunchConfiguration('use_namespace')
     bringup_dir = get_package_share_directory('nav2_bringup')
     params_file = LaunchConfiguration('params_file')
-#    remappings = [((namespace, '/tf'), '/tf'),
-#                  ((namespace, '/tf_static'), '/tf_static'),
-#                  ('/tf', 'tf'),
-#                  ('/tf_static', 'tf_static')]
 
     remappings = [('/tf', 'tf'),
-                              ('/tf_static', 'tf_static')]
+                  ('/tf_static', 'tf_static')]
 
     configured_params = RewrittenYaml(
         source_file=params_file,
