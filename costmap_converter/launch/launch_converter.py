@@ -53,7 +53,6 @@ def generate_launch_description():
             parameters=[{"rolling_window": False,
                          "map_topic": "/occupancy_grid",
                          "wait_tf_on_activate": False,
-                         "update_frequency": 0.0,
                          "static_layer.subscribe_to_updates": True,
                          "static_layer.map_subscribe_transient_local": True
                          }],
