@@ -48,9 +48,10 @@ def generate_launch_description():
             condition=IfCondition(use_namespace),
             namespace=namespace),
         launch_ros.actions.Node(
-            package='costmap_converter', node_executable='standalone_converter', output='screen',
+            package='costmap_converter', executable='standalone_converter', output='screen',
             parameters=[{"rolling_window": False,
-                         "map_topic": ("/costmap_node/map"),
+                         "map_topic": "/agv1/global_costmap/costmap_node/map",
+                         "wait_tf_on_activate": False,
                          "static_layer.subscribe_to_updates": True,
                          "static_layer.map_subscribe_transient_local": True
                          }],                                                                             
