@@ -244,13 +244,15 @@ protected:
      */
     void spinThread()
     {
+      rclcpp::executors::SingleThreadedExecutor executor;
+      executor.add_node(nh_);
       while (rclcpp::ok())
       {
         {
           std::lock_guard<std::mutex> terminate_lock(terminate_mutex_);
           if (need_to_terminate_)
             break;
-          rclcpp::spin_some(nh_);
+          executor.spin_some();
         }
       }
     }
