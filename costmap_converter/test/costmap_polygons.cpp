@@ -121,11 +121,14 @@ TEST_F(CostmapToPolygonsDBSMCCHTest, dbScan)
 {
   std::vector< std::vector<costmap_converter::CostmapToPolygonsDBSMCCH::KeyPoint> > clusters;
   costmap_to_polygons.dbScan(clusters);
-  
-  ASSERT_EQ(3, clusters.size());
-  ASSERT_EQ(2, clusters[0].size()); // noisy points not belonging to a cluster
-  ASSERT_EQ(costmap_to_polygons.parameters().max_pts_, clusters[1].size()); // first cluster at (0,0)
-  ASSERT_EQ(costmap_to_polygons.parameters().max_pts_/2 + 1, clusters[2].size()); // second cluster at (1,1)
+  size_t correct_size{3};
+  ASSERT_EQ(correct_size, clusters.size());
+  correct_size = 2;
+  ASSERT_EQ(correct_size, clusters[0].size()); // noisy points not belonging to a cluster
+  correct_size = costmap_to_polygons.parameters().max_pts_;
+  ASSERT_EQ(correct_size, clusters[1].size()); // first cluster at (0,0)
+  correct_size = costmap_to_polygons.parameters().max_pts_/2 + 1;
+  ASSERT_EQ(correct_size, clusters[2].size()); // second cluster at (1,1)
 }
 
 TEST(CostmapToPolygonsDBSMCCH, EmptyMap)
@@ -137,8 +140,10 @@ TEST(CostmapToPolygonsDBSMCCH, EmptyMap)
 
   std::vector< std::vector<costmap_converter::CostmapToPolygonsDBSMCCH::KeyPoint> > clusters;
   costmap_to_polygons.dbScan(clusters);
-  ASSERT_EQ(1, clusters.size());    // noise cluster exists
-  ASSERT_EQ(0, clusters[0].size()); // noise clsuter is empty
+  size_t correct_size{1};
+  ASSERT_EQ(correct_size, clusters.size());    // noise cluster exists
+  correct_size = 0;
+  ASSERT_EQ(correct_size, clusters[0].size()); // noise clsuter is empty
 }
 
 TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygon)
@@ -154,7 +159,8 @@ TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygon)
   // degenerate case with just two points
   geometry_msgs::msg::Polygon original_polygon = polygon;
   costmap_to_polygons.simplifyPolygon(polygon);
-  ASSERT_EQ(2, polygon.points.size());
+  size_t correct_size{2};
+  ASSERT_EQ(correct_size, polygon.points.size());
   for (size_t i = 0; i < polygon.points.size(); ++i)
   {
     ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
@@ -165,7 +171,8 @@ TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygon)
   polygon.points.push_back(create_point(1., simplification_threshold / 2.));
   original_polygon = polygon;
   costmap_to_polygons.simplifyPolygon(polygon);
-  ASSERT_EQ(3, polygon.points.size());
+  correct_size = 3;
+  ASSERT_EQ(correct_size, polygon.points.size());
   for (size_t i = 0; i < polygon.points.size(); ++i)
   {
     ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
@@ -177,7 +184,7 @@ TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygon)
   // remove the point that has to be removed by the simplification
   original_polygon.points.erase(original_polygon.points.begin()+2);
   costmap_to_polygons.simplifyPolygon(polygon);
-  ASSERT_EQ(3, polygon.points.size());
+  ASSERT_EQ(correct_size, polygon.points.size());
   for (size_t i = 0; i < polygon.points.size(); ++i)
   {
     ASSERT_FLOAT_EQ(original_polygon.points[i].x, polygon.points[i].x);
@@ -208,7 +215,8 @@ TEST(CostmapToPolygonsDBSMCCH, SimplifyPolygonPerfectLines)
     polygon.points.push_back(create_point(lastPoint.x + i * 1., lastPoint.y));
 
   costmap_to_polygons.simplifyPolygon(polygon);
-  ASSERT_EQ(6, polygon.points.size());
+  size_t correct_size{6};
+  ASSERT_EQ(correct_size, polygon.points.size());
   ASSERT_FLOAT_EQ(  0., polygon.points[0].x);
   ASSERT_FLOAT_EQ(  0., polygon.points[0].y);
   ASSERT_FLOAT_EQ(100., polygon.points[1].x);
