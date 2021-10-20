@@ -46,12 +46,12 @@
 #include <costmap_converter/costmap_converter_interface.h>
 #include <pluginlib/class_loader.h>
 
-
+#include <std_srvs/SetBool.h>
 
 class CostmapStandaloneConversion
 {
 public:
-  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
+  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~"), enabled_(false)
   {
       // load converter plugin from parameter server, otherwise set default
       std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
@@ -85,6 +85,8 @@ public:
       costmap_update_sub_ = n_.subscribe(costmap_update_topic, 1, &CostmapStandaloneConversion::costmapUpdateCallback, this);
       obstacle_pub_ = n_.advertise<costmap_converter::ObstacleArrayMsg>(obstacles_topic, 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>(polygon_marker_topic, 10);
+      trigger_ = n_.advertiseService("enable", &CostmapStandaloneConversion::triggerCb, this);
+
 
       occupied_min_value_ = 100;
       n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
@@ -126,6 +128,10 @@ public:
 
       // convert
       converter_->updateCostmap2D();
+
+      if (!enabled_)
+        return;
+
       converter_->compute();
       costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
 
@@ -153,6 +159,10 @@ public:
     // convert
     // TODO(roesmann): currently, the converter updates the complete costmap and not the part which is updated in this callback
     converter_->updateCostmap2D();
+    
+    if (!enabled_)
+      return;
+
     converter_->compute();
     costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
 
@@ -273,11 +283,27 @@ private:
   ros::Subscriber costmap_update_sub_;
   ros::Publisher obstacle_pub_;
   ros::Publisher marker_pub_;
+  ros::ServiceServer trigger_;
+  bool enabled_;
 
   std::string frame_id_;
   int occupied_min_value_;
 
   costmap_2d::Costmap2D map_;
+
+  bool triggerCb(std_srvs::SetBool::Request& request, std_srvs::SetBool::Response& response)
+  {
+    if (request.data) {
+      enabled_ = true;
+      response.success = true;
+      response.message = "costmap converter enabled.";
+    } else {
+      enabled_ = false;
+      response.success = true;
+      response.message = "costmap converter stopped.";
+    }
+    return true;
+  }
 
 };
 
