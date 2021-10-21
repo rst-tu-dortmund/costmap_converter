@@ -51,7 +51,7 @@
 class CostmapStandaloneConversion
 {
 public:
-  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~"), enabled_(false)
+  CostmapStandaloneConversion() : converter_loader_("costmap_converter", "costmap_converter::BaseCostmapToPolygons"), n_("~")
   {
       // load converter plugin from parameter server, otherwise set default
       std::string converter_plugin = "costmap_converter::CostmapToPolygonsDBSMCCH";
@@ -94,6 +94,8 @@ public:
       std::string odom_topic = "/odom";
       n_.param("odom_topic", odom_topic, odom_topic);
 
+      n_.param("enable", enabled_, true);
+      
       if (converter_)
       {
         converter_->setOdomTopic(odom_topic);
