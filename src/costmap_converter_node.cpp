@@ -94,7 +94,7 @@ public:
       std::string odom_topic = "/odom";
       n_.param("odom_topic", odom_topic, odom_topic);
 
-      n_.param("enable", enabled_, true);
+      n_.param("enabled", enabled_, true);
       
       if (converter_)
       {
