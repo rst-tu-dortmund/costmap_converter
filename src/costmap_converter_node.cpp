@@ -46,7 +46,7 @@
 #include <costmap_converter/costmap_converter_interface.h>
 #include <pluginlib/class_loader.h>
 
-
+#include <std_srvs/SetBool.h>
 
 class CostmapStandaloneConversion
 {
@@ -85,6 +85,8 @@ public:
       costmap_update_sub_ = n_.subscribe(costmap_update_topic, 1, &CostmapStandaloneConversion::costmapUpdateCallback, this);
       obstacle_pub_ = n_.advertise<costmap_converter::ObstacleArrayMsg>(obstacles_topic, 1000);
       marker_pub_ = n_.advertise<visualization_msgs::Marker>(polygon_marker_topic, 10);
+      trigger_ = n_.advertiseService("enable", &CostmapStandaloneConversion::triggerCb, this);
+
 
       occupied_min_value_ = 100;
       n_.param("occupied_min_value", occupied_min_value_, occupied_min_value_);
@@ -92,6 +94,8 @@ public:
       std::string odom_topic = "/odom";
       n_.param("odom_topic", odom_topic, odom_topic);
 
+      n_.param("enabled", enabled_, true);
+      
       if (converter_)
       {
         converter_->setOdomTopic(odom_topic);
@@ -126,6 +130,10 @@ public:
 
       // convert
       converter_->updateCostmap2D();
+
+      if (!enabled_)
+        return;
+
       converter_->compute();
       costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
 
@@ -134,9 +142,7 @@ public:
 
       obstacle_pub_.publish(obstacles);
 
-      frame_id_ = msg->header.frame_id;
-
-      publishAsMarker(frame_id_, *obstacles, marker_pub_);
+      publishAsMarker(msg->header.frame_id, *obstacles, marker_pub_);
   }
 
   void costmapUpdateCallback(const map_msgs::OccupancyGridUpdateConstPtr& update)
@@ -153,6 +159,10 @@ public:
     // convert
     // TODO(roesmann): currently, the converter updates the complete costmap and not the part which is updated in this callback
     converter_->updateCostmap2D();
+    
+    if (!enabled_)
+      return;
+
     converter_->compute();
     costmap_converter::ObstacleArrayConstPtr obstacles = converter_->getObstacles();
 
@@ -161,7 +171,7 @@ public:
 
     obstacle_pub_.publish(obstacles);
 
-    publishAsMarker(frame_id_, *obstacles, marker_pub_);
+    publishAsMarker(update->header.frame_id, *obstacles, marker_pub_);
   }
 
   void publishAsMarker(const std::string& frame_id, const std::vector<geometry_msgs::PolygonStamped>& polygonStamped, ros::Publisher& marker_pub)
@@ -273,11 +283,26 @@ private:
   ros::Subscriber costmap_update_sub_;
   ros::Publisher obstacle_pub_;
   ros::Publisher marker_pub_;
+  ros::ServiceServer trigger_;
+  bool enabled_;
 
-  std::string frame_id_;
   int occupied_min_value_;
 
   costmap_2d::Costmap2D map_;
+
+  bool triggerCb(std_srvs::SetBool::Request& request, std_srvs::SetBool::Response& response)
+  {
+    if (request.data) {
+      enabled_ = true;
+      response.success = true;
+      response.message = "costmap converter enabled.";
+    } else {
+      enabled_ = false;
+      response.success = true;
+      response.message = "costmap converter stopped.";
+    }
+    return true;
+  }
 
 };
 
