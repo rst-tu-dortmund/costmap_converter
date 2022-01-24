@@ -194,7 +194,7 @@ public:
       
       if (spin_thread)
       {
-        RCLCPP_DEBUG(nh_->get_logger(), "costmap_converter", "Spinning up a thread for the CostmapToPolygons plugin");
+        RCLCPP_DEBUG(nh_->get_logger(), "costmap_converter.\n Spinning up a thread for the CostmapToPolygons plugin");
         need_to_terminate_ = false;
         
         worker_timer_ = nh_->create_wall_timer(
@@ -310,7 +310,7 @@ public:
 //      std::string raw_plugin_name = static_converter_loader_.getName(plugin_name);
       static_costmap_converter_->initialize(nh_parent);
       setStaticCostmapConverterPlugin(static_costmap_converter_);
-      RCLCPP_INFO(getLogger(), "CostmapToDynamicObstacles: underlying costmap conversion plugin for static obstacles %s loaded.", plugin_name);
+      RCLCPP_INFO(getLogger(), "CostmapToDynamicObstacles: underlying costmap conversion plugin for static obstacles %s loaded.", plugin_name.c_str());
     }
     catch(const pluginlib::PluginlibException& ex)
     {
