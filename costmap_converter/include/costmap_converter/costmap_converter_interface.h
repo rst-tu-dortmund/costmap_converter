@@ -139,6 +139,7 @@ public:
     virtual ObstacleArrayConstPtr getObstacles()
     {
       ObstacleArrayPtr obstacles = std::make_shared<costmap_converter_msgs::msg::ObstacleArrayMsg>();
+      obstacles->header.frame_id = "odom";
       PolygonContainerConstPtr polygons = getPolygons();
       if (polygons)
       {
