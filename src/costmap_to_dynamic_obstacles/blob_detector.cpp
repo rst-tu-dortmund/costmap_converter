@@ -6,7 +6,7 @@ BlobDetector::BlobDetector(const SimpleBlobDetector::Params& parameters) : param
 
 cv::Ptr<BlobDetector> BlobDetector::create(const cv::SimpleBlobDetector::Params& params)
 {
-  return cv::Ptr<BlobDetector> (new BlobDetector(params)); // compatibility with older versions
+  return cv::Ptr<BlobDetector> (BlobDetector::create(params)); // compatibility with older versions
   //return cv::makePtr<BlobDetector>(params);
 }
 
