@@ -57,14 +57,16 @@
  *
  * See http://docs.opencv.org/trunk/d0/d7a/classcv_1_1SimpleBlobDetector.html for the original class.
  */
-class BlobDetector : public cv::SimpleBlobDetector
+class BlobDetector : public cv::Feature2D
 {
 public:
+  typedef cv::SimpleBlobDetector::Params Params;
+
   //! Default constructor which optionally accepts custom parameters
-  BlobDetector(const cv::SimpleBlobDetector::Params& parameters = cv::SimpleBlobDetector::Params());
+  BlobDetector(const Params& parameters = Params());
 
   //! Create shared instance of the blob detector with given parameters
-  static cv::Ptr<BlobDetector> create(const BlobDetector::Params& params);
+  static cv::Ptr<BlobDetector> create(const Params& params);
 
   /**
    * @brief Detects keypoints in an image and extracts contours
@@ -90,7 +92,7 @@ public:
   const std::vector<std::vector<cv::Point>>& getContours() { return contours_; }
 
   //! Update internal parameters
-  void updateParameters(const cv::SimpleBlobDetector::Params& parameters);
+  void updateParameters(const Params& parameters);
 
 protected:
   struct Center
