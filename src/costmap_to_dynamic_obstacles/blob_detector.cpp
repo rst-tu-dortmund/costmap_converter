@@ -2,9 +2,9 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 
-BlobDetector::BlobDetector(const SimpleBlobDetector::Params& parameters) : params_(parameters) {}
+BlobDetector::BlobDetector(const Params& parameters) : params_(parameters) {}
 
-cv::Ptr<BlobDetector> BlobDetector::create(const cv::SimpleBlobDetector::Params& params)
+cv::Ptr<BlobDetector> BlobDetector::create(const Params& params)
 {
   return cv::Ptr<BlobDetector> (new BlobDetector(params)); // compatibility with older versions
   //return cv::makePtr<BlobDetector>(params);
