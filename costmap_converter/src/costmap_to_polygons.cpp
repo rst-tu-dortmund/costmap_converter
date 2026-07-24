@@ -215,10 +215,12 @@ void CostmapToPolygonsDBSMCCH::updateCostmap2D()
       for (auto& n : neighbor_lookup_)
         n.clear();
 
+      auto size_x = costmap_->getSizeInCellsX();
+      auto size_y = costmap_->getSizeInCellsY();
       // get indices of obstacle cells
-      for(std::size_t i = 0; i < costmap_->getSizeInCellsX(); i++)
+      for(std::size_t i = 0; i < size_x; i++)
       {
-        for(std::size_t j = 0; j < costmap_->getSizeInCellsY(); j++)
+        for(std::size_t j = 0; j < size_y; j++)
         {
           int value = costmap_->getCost(i,j);
           if(value >= nav2_costmap_2d::LETHAL_OBSTACLE)

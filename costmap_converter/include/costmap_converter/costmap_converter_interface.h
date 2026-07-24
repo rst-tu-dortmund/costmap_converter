@@ -242,6 +242,7 @@ protected:
      */
     void spinThread()
     {
+      rclcpp::WallRate r(10);
       while (rclcpp::ok())
       {
         {
@@ -249,6 +250,7 @@ protected:
           if (need_to_terminate_)
             break;
           rclcpp::spin_some(nh_);
+          r.sleep();
         }
       }
     }
